@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Flame } from 'lucide-react';
+import { Loader2, Heart } from 'lucide-react';
+
 import PageShell from '@/components/site/PageShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { CRM_SUBSCRIBE_URL } from '@/data/platform';
@@ -56,9 +57,10 @@ const Login: React.FC = () => {
     <PageShell>
       <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
         <div className="rounded-3xl border border-stone-200 bg-white p-8">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-900 text-amber-400">
-            <Flame className="h-5 w-5" />
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 text-white">
+            <Heart className="h-5 w-5 fill-current" />
           </span>
+
           <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-stone-900">
             {mode === 'signin' ? 'Sign in to your store' : 'Create your owner account'}
           </h1>

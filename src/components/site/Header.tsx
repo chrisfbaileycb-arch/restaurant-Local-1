@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, ChevronDown, LogOut, Flame } from 'lucide-react';
+import { ShoppingCart, Menu, X, ChevronDown, LogOut, Heart } from 'lucide-react';
+
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,16 +38,17 @@ const Header: React.FC = () => {
 
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
         <Link to="/" className="group flex shrink-0 items-center gap-2 font-extrabold tracking-tight text-slate-900">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-orange-500 text-white shadow-md transition group-hover:animate-wiggle">
-            <Flame className="h-5 w-5" />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 text-white shadow-md transition group-hover:animate-wiggle">
+            <Heart className="h-5 w-5 fill-current" />
           </span>
           <span className="flex flex-col leading-none">
             <span className="text-base sm:text-lg">
-              <span className="text-gradient-vibe">Yum</span> Food Local
+              <span className="text-gradient-vibe">Love</span> Local Eats
             </span>
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">POS</span>
           </span>
         </Link>
+
 
 
         <nav className="hidden items-center gap-1 lg:flex">

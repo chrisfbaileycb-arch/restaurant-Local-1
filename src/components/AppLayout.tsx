@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Monitor, ShoppingBag, Globe, Gift, CalendarDays, BarChart3, CreditCard, Package,
-  ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck, Wallet,
+  ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck, Wallet, Heart,
 } from 'lucide-react';
+
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
@@ -82,10 +83,10 @@ const AppLayout: React.FC = () => {
       <section className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-fuchsia-600 to-orange-500">
         <img
           src={HERO_IMAGE}
-          alt="Restaurant counter with a Yum Food Local POS touchscreen"
-
+          alt="Restaurant counter with a Love Local Eats POS touchscreen"
           className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity"
         />
+
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(76,29,149,.85),rgba(219,39,119,.55),rgba(249,115,22,.35))]" />
         <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 animate-blob rounded-full bg-amber-300/40 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 right-0 h-96 w-96 animate-blob rounded-full bg-cyan-300/30 blur-3xl [animation-delay:4s]" />
@@ -101,7 +102,11 @@ const AppLayout: React.FC = () => {
                 Launch your whole business.
               </span>
             </h1>
-            <p className="mt-6 max-w-xl animate-rise-in text-lg text-white/85 [animation-delay:120ms]">{BRAND.subtitle}</p>
+            <p className="mt-5 inline-flex animate-rise-in items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2 text-sm font-bold text-rose-100 ring-1 ring-white/20">
+              <Heart className="h-4 w-4 animate-wiggle fill-current text-rose-300" /> {BRAND.promise}
+            </p>
+            <p className="mt-4 max-w-xl animate-rise-in text-lg text-white/85 [animation-delay:120ms]">{BRAND.subtitle}</p>
+
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <span className="relative inline-flex rounded-xl">
@@ -265,7 +270,7 @@ const AppLayout: React.FC = () => {
             One platform, <span className="text-gradient-vibe">everything switched on</span>
           </h2>
           <p className="mt-3 max-w-2xl text-slate-600">
-            Most owners duct-tape six vendors together. Yum Food Local POS ships all of it configured from the same
+            Most owners duct-tape six vendors together. Love Local Eats POS ships all of it configured from the same
             menu upload.
           </p>
 
@@ -508,10 +513,11 @@ const AppLayout: React.FC = () => {
                 Start cheap. Add gear when business is good.
               </h2>
               <p className="mt-3 max-w-xl text-slate-700">
-                You do not need a $1,300 terminal to open. Run Yum Food Local POS on the phone in your pocket, or build
+                You do not need a $1,300 terminal to open. Run Love Local Eats POS on the phone in your pocket, or build
                 a real touchscreen counter with a $149 tablet, a $39 stand, an $89 locking cash drawer, a $49 tap reader
                 and cheap thermal printers for the guest and the line.
               </p>
+
 
               <ul className="mt-5 grid gap-2 sm:grid-cols-2">
                 {[

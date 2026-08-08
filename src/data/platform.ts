@@ -1,17 +1,21 @@
 // ============================================================
-// Yum Food Local POS — single source of truth for shared platform data.
+// Love Local Eats POS — single source of truth for shared platform data.
 // Import from here; never re-declare these lists elsewhere.
 // ============================================================
 
 export const BRAND = {
-  name: 'Yum Food Local POS',
-  shortName: 'Yum Local',
+  name: 'Love Local Eats POS',
+  shortName: 'Love Local Eats',
+  wordmark: { love: 'Love', local: 'Local Eats', kicker: 'POS' },
   tagline: 'Upload your menu. Launch your whole business.',
   subtitle:
-    'The no-code restaurant operating system: touchscreen POS, table tabs, kitchen & bar tickets, online ordering, a one-page website, rewards, scheduling and every report your accountant asks for — built automatically from one menu upload.',
-  supportPhone: '(888) 555-YUM1',
-  supportEmail: 'hello@yumfoodlocal.com',
+    'The no-code restaurant operating system built with heart for independent operators: touchscreen POS, table tabs, kitchen & bar tickets, online ordering, a one-page website, rewards, scheduling and every report your accountant asks for — built automatically from one menu upload.',
+  promise: 'Built with heart for independent operators. No corporate contracts, no lock-in.',
+  supportPhone: '(888) 555-5683',
+  supportEmail: 'hello@lovelocaleatspos.com',
+  domain: 'lovelocaleatspos.com',
 };
+
 
 
 export const PROJECT_ID = '6a7724f7e7b1bd470e4c72fe';
@@ -171,12 +175,13 @@ export interface Processor {
 }
 
 export const PROCESSORS: Processor[] = [
-  { id: 'yum-direct', name: 'Yum Direct (interchange+)', swipeRate: 2.15, perTxn: 0.08, monthly: 0, note: 'Least-cost routing on every swipe', routing: true },
-  { id: 'yum-flat', name: 'Yum Flat Rate', swipeRate: 2.45, perTxn: 0.1, monthly: 0, note: 'Simple predictable pricing', routing: true },
+  { id: 'lle-direct', name: 'Love Local Direct (interchange+)', swipeRate: 2.15, perTxn: 0.08, monthly: 0, note: 'Least-cost routing on every swipe', routing: true },
+  { id: 'lle-flat', name: 'Love Local Flat Rate', swipeRate: 2.45, perTxn: 0.1, monthly: 0, note: 'Simple predictable pricing', routing: true },
   { id: 'northline', name: 'Northline Merchant', swipeRate: 2.6, perTxn: 0.1, monthly: 9.95, note: 'Regional acquirer, next-day funding', routing: false },
   { id: 'harborpay', name: 'HarborPay', swipeRate: 2.69, perTxn: 0.09, monthly: 14.95, note: 'Includes chargeback defense', routing: false },
   { id: 'legacy-flat', name: 'Legacy Flat 2.9%', swipeRate: 2.9, perTxn: 0.3, monthly: 0, note: 'Typical online-first processor pricing', routing: false },
 ];
+
 
 
 export const calcProcessingCost = (p: Processor, monthlyVolume: number, avgTicket: number) => {
@@ -218,15 +223,16 @@ export const PLANS = [
 
 // ---------------- Affiliate / partner services ----------------
 export const PARTNER_SERVICES = [
-  { id: 'insurance', name: 'Line Cook Insurance', category: 'Insurance', offer: 'General liability from $41/mo', payout: 'Yum Local members save 12%' },
+  { id: 'insurance', name: 'Line Cook Insurance', category: 'Insurance', offer: 'General liability from $41/mo', payout: 'Love Local Eats members save 12%' },
   { id: 'supply', name: 'Prime Route Food Supply', category: 'Food & Paper', offer: 'Weekly delivery, locked pricing', payout: '$250 first-order credit' },
   { id: 'linens', name: 'FreshFold Linen Co.', category: 'Linens', offer: 'Aprons & towels, 2x weekly', payout: 'First month free' },
-  { id: 'payroll', name: 'ShiftPay Payroll', category: 'Payroll', offer: 'Tipped-wage payroll, auto-filed', payout: '3 months free with a Yum Local export' },
+  { id: 'payroll', name: 'ShiftPay Payroll', category: 'Payroll', offer: 'Tipped-wage payroll, auto-filed', payout: '3 months free with a Love Local Eats export' },
   { id: 'hood', name: 'CleanHood Services', category: 'Compliance', offer: 'Hood & grease trap on schedule', payout: '15% off annual plan' },
   { id: 'signage', name: 'Streetside Signs', category: 'Branding', offer: 'Menu boards & window vinyl', payout: 'Free design with menu upload' },
-  { id: 'lending', name: 'Countertop Capital', category: 'Funding', offer: 'Equipment financing, 0% for 6mo', payout: 'Pre-approved for Yum Local shops' },
+  { id: 'lending', name: 'Countertop Capital', category: 'Funding', offer: 'Equipment financing, 0% for 6mo', payout: 'Pre-approved for Love Local Eats shops' },
   { id: 'delivery', name: 'LocalDash Couriers', category: 'Delivery', offer: 'Flat $5.99 courier hand-off', payout: 'No commission on your orders' },
 ];
+
 
 
 // ---------------- Social proof ----------------

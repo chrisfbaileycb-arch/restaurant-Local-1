@@ -111,7 +111,8 @@ export default function ServiceFloor() {
                 <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                <span className="ml-2">yum local · {role.name.toLowerCase()} view</span>
+                <span className="ml-2">love local eats · {role.name.toLowerCase()} view</span>
+
               </div>
               <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold text-white">
                 {visible.length} ticket{visible.length === 1 ? '' : 's'}

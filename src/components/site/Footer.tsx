@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Phone, Mail } from 'lucide-react';
+import { Heart, Phone, Mail } from 'lucide-react';
+
 import { supabase } from '@/lib/supabase';
 import { BRAND, BUSINESS_TYPES, REPORTS } from '@/data/platform';
 import SignupForm from '@/components/site/SignupForm';
@@ -25,12 +26,14 @@ const Footer: React.FC = () => {
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 text-white">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-orange-500 text-white shadow-lg">
-                <Flame className="h-5 w-5" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 text-white shadow-lg">
+                <Heart className="h-5 w-5 fill-current" />
               </span>
               <span className="text-lg font-extrabold">{BRAND.name}</span>
             </div>
-            <p className="mt-4 max-w-sm text-sm text-slate-400">{BRAND.subtitle}</p>
+            <p className="mt-3 text-sm font-semibold text-rose-300">{BRAND.promise}</p>
+            <p className="mt-2 max-w-sm text-sm text-slate-400">{BRAND.subtitle}</p>
+
 
             <div className="mt-6 max-w-md">
               <SignupForm
