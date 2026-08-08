@@ -33,7 +33,8 @@ const PROMISES = [
 const FAQS = [
   {
     q: 'Do I have to buy a terminal to start?',
-    a: 'No. Vibe OS runs in a browser on the phone or tablet you already own. Hardware is optional — most trucks start with just a $49 tap reader.',
+    a: 'No. Yum Food Local POS runs in a browser on the phone or tablet you already own. Hardware is optional — most trucks start with just a $49 tap reader.',
+
   },
   {
     q: 'What happens when the WiFi or cell signal drops?',

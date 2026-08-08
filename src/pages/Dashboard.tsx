@@ -377,7 +377,8 @@ const Dashboard: React.FC = () => {
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
             <div className="border-b border-stone-200 px-5 py-4">
               <h2 className="font-bold text-stone-900">Your hardware orders</h2>
-              <p className="text-sm text-stone-500">Gear and services purchased from the Vibe shop.</p>
+              <p className="text-sm text-stone-500">Gear and services purchased from the Yum Food Local shop.</p>
+
             </div>
             {orders.length === 0 ? (
               <div className="p-10 text-center">

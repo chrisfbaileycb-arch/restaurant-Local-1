@@ -1,16 +1,18 @@
 // ============================================================
-// Vibe OS — single source of truth for shared platform data.
+// Yum Food Local POS — single source of truth for shared platform data.
 // Import from here; never re-declare these lists elsewhere.
 // ============================================================
 
 export const BRAND = {
-  name: 'Vibe OS',
+  name: 'Yum Food Local POS',
+  shortName: 'Yum Local',
   tagline: 'Upload your menu. Launch your whole business.',
   subtitle:
-    'The no-code restaurant operating system: touchscreen POS, online ordering, a one-page website, rewards, scheduling and every report your accountant asks for — built automatically from one menu upload.',
-  supportPhone: '(888) 555-VIBE',
-  supportEmail: 'hello@vibeos.app',
+    'The no-code restaurant operating system: touchscreen POS, table tabs, kitchen & bar tickets, online ordering, a one-page website, rewards, scheduling and every report your accountant asks for — built automatically from one menu upload.',
+  supportPhone: '(888) 555-YUM1',
+  supportEmail: 'hello@yumfoodlocal.com',
 };
+
 
 export const PROJECT_ID = '6a7724f7e7b1bd470e4c72fe';
 export const CRM_SUBSCRIBE_URL = `https://famous.ai/api/crm/${PROJECT_ID}/subscribe`;
@@ -169,12 +171,13 @@ export interface Processor {
 }
 
 export const PROCESSORS: Processor[] = [
-  { id: 'vibe-direct', name: 'Vibe Direct (interchange+)', swipeRate: 2.15, perTxn: 0.08, monthly: 0, note: 'Least-cost routing on every swipe', routing: true },
-  { id: 'vibe-flat', name: 'Vibe Flat Rate', swipeRate: 2.45, perTxn: 0.1, monthly: 0, note: 'Simple predictable pricing', routing: true },
+  { id: 'yum-direct', name: 'Yum Direct (interchange+)', swipeRate: 2.15, perTxn: 0.08, monthly: 0, note: 'Least-cost routing on every swipe', routing: true },
+  { id: 'yum-flat', name: 'Yum Flat Rate', swipeRate: 2.45, perTxn: 0.1, monthly: 0, note: 'Simple predictable pricing', routing: true },
   { id: 'northline', name: 'Northline Merchant', swipeRate: 2.6, perTxn: 0.1, monthly: 9.95, note: 'Regional acquirer, next-day funding', routing: false },
   { id: 'harborpay', name: 'HarborPay', swipeRate: 2.69, perTxn: 0.09, monthly: 14.95, note: 'Includes chargeback defense', routing: false },
   { id: 'legacy-flat', name: 'Legacy Flat 2.9%', swipeRate: 2.9, perTxn: 0.3, monthly: 0, note: 'Typical online-first processor pricing', routing: false },
 ];
+
 
 export const calcProcessingCost = (p: Processor, monthlyVolume: number, avgTicket: number) => {
   const txns = avgTicket > 0 ? monthlyVolume / avgTicket : 0;
@@ -215,15 +218,16 @@ export const PLANS = [
 
 // ---------------- Affiliate / partner services ----------------
 export const PARTNER_SERVICES = [
-  { id: 'insurance', name: 'Line Cook Insurance', category: 'Insurance', offer: 'General liability from $41/mo', payout: 'Vibe members save 12%' },
+  { id: 'insurance', name: 'Line Cook Insurance', category: 'Insurance', offer: 'General liability from $41/mo', payout: 'Yum Local members save 12%' },
   { id: 'supply', name: 'Prime Route Food Supply', category: 'Food & Paper', offer: 'Weekly delivery, locked pricing', payout: '$250 first-order credit' },
   { id: 'linens', name: 'FreshFold Linen Co.', category: 'Linens', offer: 'Aprons & towels, 2x weekly', payout: 'First month free' },
-  { id: 'payroll', name: 'ShiftPay Payroll', category: 'Payroll', offer: 'Tipped-wage payroll, auto-filed', payout: '3 months free with Vibe export' },
+  { id: 'payroll', name: 'ShiftPay Payroll', category: 'Payroll', offer: 'Tipped-wage payroll, auto-filed', payout: '3 months free with a Yum Local export' },
   { id: 'hood', name: 'CleanHood Services', category: 'Compliance', offer: 'Hood & grease trap on schedule', payout: '15% off annual plan' },
   { id: 'signage', name: 'Streetside Signs', category: 'Branding', offer: 'Menu boards & window vinyl', payout: 'Free design with menu upload' },
-  { id: 'lending', name: 'Countertop Capital', category: 'Funding', offer: 'Equipment financing, 0% for 6mo', payout: 'Pre-approved for Vibe stores' },
+  { id: 'lending', name: 'Countertop Capital', category: 'Funding', offer: 'Equipment financing, 0% for 6mo', payout: 'Pre-approved for Yum Local shops' },
   { id: 'delivery', name: 'LocalDash Couriers', category: 'Delivery', offer: 'Flat $5.99 courier hand-off', payout: 'No commission on your orders' },
 ];
+
 
 // ---------------- Social proof ----------------
 export const TESTIMONIALS = [
@@ -314,3 +318,122 @@ export const STARTER_PLANS: StarterPlan[] = [
 ];
 
 export const BUDGET_TAG = 'budget';
+
+// ============================================================
+// Service floor: roles, tabs and ticket routing
+// (the "who sees what" layer that keeps a busy floor honest)
+// ============================================================
+
+export interface StaffRole {
+  id: string;
+  name: string;
+  icon: string; // lucide icon name, resolved by the consuming component
+  tone: string; // tailwind gradient
+  sees: string;
+  can: string[];
+}
+
+export const STAFF_ROLES: StaffRole[] = [
+  {
+    id: 'server',
+    name: 'Server / Waiter',
+    icon: 'ConciergeBell',
+    tone: 'from-fuchsia-500 to-pink-500',
+    sees: 'Their tables, every open tab and a buzz the second food is up.',
+    can: ['Open & name a tab', 'Fire a course', 'Split or merge checks', 'Take payment tableside'],
+  },
+  {
+    id: 'bar',
+    name: 'Bar',
+    icon: 'Beer',
+    tone: 'from-amber-500 to-orange-500',
+    sees: 'Drink tickets only, with cocktails queued ahead of grab-and-go cans.',
+    can: ['Pour queue by prep time', 'Mark drinks ready', '86 an item instantly', 'Log spills & comps'],
+  },
+  {
+    id: 'kitchen',
+    name: 'Kitchen',
+    icon: 'ChefHat',
+    tone: 'from-emerald-500 to-teal-500',
+    sees: 'Food tickets on a big-type screen or printed on the line — never drinks.',
+    can: ['Bump tickets', 'Ticket timers & late flags', '86 a menu item', 'Recall the last ticket'],
+  },
+  {
+    id: 'manager',
+    name: 'Owner / Manager',
+    icon: 'ShieldCheck',
+    tone: 'from-violet-500 to-indigo-500',
+    sees: 'Everything, everywhere — plus who voided what and when.',
+    can: ['Approve voids & comps', 'Set role permissions', 'Live labor vs sales', 'Close the day'],
+  },
+];
+
+// A shift can change daily, so staff pick a role at clock-in rather than
+// having a separate login per job. These are the guardrails on that.
+export const ROLE_RULES = [
+  'One login per person, role chosen at clock-in — cover the bar tonight, wait tables tomorrow.',
+  'A PIN pad at the terminal switches users in about a second between orders.',
+  'Managers approve voids, comps and drawer opens with their own PIN, and it lands in the audit trail.',
+  'Every ticket, void and payment is stamped with the employee and the role they were working.',
+];
+
+export interface ServicePillar {
+  id: string;
+  title: string;
+  problem: string;
+  fix: string;
+  icon: string;
+  bullets: string[];
+}
+
+export const SERVICE_PILLARS: ServicePillar[] = [
+  {
+    id: 'tabs',
+    title: 'Open tabs that count themselves',
+    problem: 'Bottles stacked under the table and "how many did you have?" at the end of the night.',
+    fix: 'Every round is rung the moment it is ordered, so the tab is always right and nothing walks out unpaid.',
+    icon: 'ReceiptText',
+    bullets: ['Tab per table, seat or name', 'Pre-auth a card to hold a tab', 'Split by seat or evenly', 'Transfer a tab to another server'],
+  },
+  {
+    id: 'routing',
+    title: 'Tickets go where the work happens',
+    problem: 'One printer for everything, so the bar reads food and the kitchen reads drinks.',
+    fix: 'Each menu category is mapped to a station on upload — food to the line, cocktails to the bar, cans straight to the runner.',
+    icon: 'Split',
+    bullets: ['Category to station mapping', 'Cocktails queued by prep time', 'Course firing (apps then mains)', 'Second station for a truck or patio'],
+  },
+  {
+    id: 'ready',
+    title: 'Nobody guesses when food is up',
+    problem: 'Fries sit in the window for half an hour because the runner never got told.',
+    fix: 'The moment the line bumps a ticket, the server who owns that table gets a ping on their phone with the table number.',
+    icon: 'BellRing',
+    bullets: ['Ready ping to the owning server', 'Window timer turns red at 4 min', 'Runner view for whoever is free', 'Guest text for pickup orders'],
+  },
+  {
+    id: 'multi',
+    title: 'Many shops, one clean account',
+    problem: 'A second truck or a second store means a second system and double the paperwork.',
+    fix: 'Each location keeps its own menu, staff and drawer, while you see them side by side and staff only ever see their own.',
+    icon: 'Building2',
+    bullets: ['Location-scoped data & staff', 'Shared menu with local prices', 'Roll-up sales across shops', 'Add a location in minutes'],
+  },
+];
+
+// Demo ticket board (used by the animated service-floor showcase)
+export interface DemoTicket {
+  id: string;
+  table: string;
+  station: 'Kitchen' | 'Bar';
+  items: string[];
+  minutes: number;
+  server: string;
+}
+
+export const DEMO_TICKETS: DemoTicket[] = [
+  { id: 'T-118', table: 'Table 4', station: 'Kitchen', items: ['2 × Basket of Fries', '1 × Fish Sandwich'], minutes: 6, server: 'Alexis' },
+  { id: 'T-119', table: 'Table 4', station: 'Bar', items: ['3 × Bottled Beer'], minutes: 1, server: 'Alexis' },
+  { id: 'T-120', table: 'Patio 2', station: 'Bar', items: ['2 × Caipirinha'], minutes: 5, server: 'Devon' },
+  { id: 'T-121', table: 'Table 9', station: 'Kitchen', items: ['1 × Shrimp Plate', '1 × Side Rice'], minutes: 11, server: 'Marco' },
+];

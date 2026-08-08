@@ -181,7 +181,8 @@ const FlowShowcase: React.FC = () => {
                 <span className="h-3 w-3 rounded-full bg-rose-400" />
                 <span className="h-3 w-3 rounded-full bg-amber-400" />
                 <span className="h-3 w-3 rounded-full bg-emerald-400" />
-                <span className="ml-2 text-xs font-semibold text-slate-400">vibe-os · building your store</span>
+                <span className="ml-2 text-xs font-semibold text-slate-400">yum food local · building your store</span>
+
               </div>
 
               <div className="rounded-2xl bg-white/5 p-5">

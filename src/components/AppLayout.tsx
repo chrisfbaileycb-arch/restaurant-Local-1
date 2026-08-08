@@ -12,6 +12,8 @@ import ProductCard from '@/components/ProductCard';
 import Reveal from '@/components/site/Reveal';
 import { Pointer, TapRing } from '@/components/site/Pointer';
 import FlowShowcase from '@/components/site/FlowShowcase';
+import ServiceFloor from '@/components/site/ServiceFloor';
+
 import {
   BRAND, HERO_IMAGE, FEATURES, STATS, BUSINESS_TYPES, LAUNCH_STEPS, REPORTS,
   REWARD_PROGRAMS, PROCESSORS, PLANS, PARTNER_SERVICES, TESTIMONIALS,
@@ -80,7 +82,8 @@ const AppLayout: React.FC = () => {
       <section className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-fuchsia-600 to-orange-500">
         <img
           src={HERO_IMAGE}
-          alt="Restaurant counter with Vibe OS touchscreen POS"
+          alt="Restaurant counter with a Yum Food Local POS touchscreen"
+
           className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity"
         />
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(76,29,149,.85),rgba(219,39,119,.55),rgba(249,115,22,.35))]" />
@@ -262,8 +265,10 @@ const AppLayout: React.FC = () => {
             One platform, <span className="text-gradient-vibe">everything switched on</span>
           </h2>
           <p className="mt-3 max-w-2xl text-slate-600">
-            Most owners duct-tape six vendors together. Vibe OS ships all of it configured from the same menu upload.
+            Most owners duct-tape six vendors together. Yum Food Local POS ships all of it configured from the same
+            menu upload.
           </p>
+
         </Reveal>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f, i) => {
@@ -289,6 +294,10 @@ const AppLayout: React.FC = () => {
           })}
         </div>
       </section>
+
+      {/* ---------------- SERVICE FLOOR (roles, tabs, ticket routing) ---------------- */}
+      <ServiceFloor />
+
 
       {/* ---------------- REPORTS ---------------- */}
       <section className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-700 to-fuchsia-700 py-16">
@@ -499,10 +508,11 @@ const AppLayout: React.FC = () => {
                 Start cheap. Add gear when business is good.
               </h2>
               <p className="mt-3 max-w-xl text-slate-700">
-                You do not need a $1,300 terminal to open. Run Vibe OS on the phone in your pocket, or build a real
-                touchscreen counter with a $149 tablet, a $39 stand, an $89 locking cash drawer, a $49 tap reader and
-                cheap thermal printers for the guest and the line.
+                You do not need a $1,300 terminal to open. Run Yum Food Local POS on the phone in your pocket, or build
+                a real touchscreen counter with a $149 tablet, a $39 stand, an $89 locking cash drawer, a $49 tap reader
+                and cheap thermal printers for the guest and the line.
               </p>
+
               <ul className="mt-5 grid gap-2 sm:grid-cols-2">
                 {[
                   'Phone-only mode for food trucks',
