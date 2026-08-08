@@ -2,6 +2,7 @@ import React from 'react';
 import { Printer, ChefHat, Wallet, CreditCard, Smartphone, ScanLine, Plug, Check, Zap } from 'lucide-react';
 
 import { useDevices } from '@/hooks/useDevices';
+import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import { DEVICE_KINDS, type DeviceKindId } from '@/data/platform';
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -14,11 +15,14 @@ const STRIP: DeviceKindId[] = ['receipt-printer', 'kitchen-printer', 'cash-drawe
 /**
  * Compact hardware strip for the POS screen: pair a device, fire its primary
  * action (test print, open drawer, test read) and watch the result land.
+ * Status mirrors the same heartbeat the owner dashboard monitors.
  */
 const DeviceBar: React.FC = () => {
   const { statusOf, pair, run, testAll, log } = useDevices();
+  const { statusFor, verifyNow } = useDeviceHealth();
   const devices = DEVICE_KINDS.filter((d) => STRIP.includes(d.id));
   const last = log[0];
+
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4">
@@ -26,12 +30,20 @@ const DeviceBar: React.FC = () => {
         <h2 className="flex items-center gap-2 font-bold text-stone-900">
           <Plug className="h-4 w-4 text-sky-600" /> Connected hardware
         </h2>
-        <button
-          onClick={testAll}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 transition hover:bg-emerald-200"
-        >
-          <Zap className="h-3.5 w-3.5" /> Run self test
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={verifyNow}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:bg-stone-200"
+          >
+            <Plug className="h-3.5 w-3.5" /> Verify connections
+          </button>
+          <button
+            onClick={testAll}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 transition hover:bg-emerald-200"
+          >
+            <Zap className="h-3.5 w-3.5" /> Run self test
+          </button>
+        </div>
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -39,21 +51,40 @@ const DeviceBar: React.FC = () => {
           const Icon = ICONS[d.icon] || Printer;
           const status = statusOf(d.id);
           const ready = status === 'ready';
+          const down = ready && statusFor(d.id).state === 'offline';
           return (
-            <div key={d.id} className="flex items-center gap-2 rounded-xl border border-stone-200 p-2.5">
+            <div
+              key={d.id}
+              className={`flex items-center gap-2 rounded-xl border p-2.5 ${
+                down ? 'border-red-300 bg-red-50' : 'border-stone-200'
+              }`}
+            >
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${d.tone} text-white`}>
                 <Icon className="h-4 w-4" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-bold text-stone-900">{d.name}</span>
-                <span className={`text-[11px] font-semibold ${ready ? 'text-emerald-600' : 'text-stone-400'}`}>
-                  {status === 'pairing' ? 'Pairing…' : status === 'busy' ? 'Sending…' : ready ? 'Ready' : 'Not paired'}
+                <span
+                  className={`text-[11px] font-semibold ${
+                    down ? 'text-red-600' : ready ? 'text-emerald-600' : 'text-stone-400'
+                  }`}
+                >
+                  {down
+                    ? 'Not connected'
+                    : status === 'pairing'
+                    ? 'Pairing…'
+                    : status === 'busy'
+                    ? 'Sending…'
+                    : ready
+                    ? 'Connected'
+                    : 'Not paired'}
                 </span>
               </span>
               {ready ? (
                 <button
                   onClick={() => run(d.id, d.actions[0].id)}
-                  className="shrink-0 rounded-lg bg-stone-900 px-2.5 py-1.5 text-[11px] font-bold text-white transition active:scale-95"
+                  disabled={down}
+                  className="shrink-0 rounded-lg bg-stone-900 px-2.5 py-1.5 text-[11px] font-bold text-white transition active:scale-95 disabled:opacity-40"
                 >
                   {d.actions[0].label}
                 </button>
@@ -69,6 +100,7 @@ const DeviceBar: React.FC = () => {
           );
         })}
       </div>
+
 
       <p className="mt-3 flex items-start gap-2 rounded-xl bg-stone-50 p-3 text-xs text-stone-600">
         <Check className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${last?.ok === false ? 'text-amber-500' : 'text-emerald-600'}`} />

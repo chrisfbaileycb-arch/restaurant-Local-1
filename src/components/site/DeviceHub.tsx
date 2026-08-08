@@ -2,18 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Printer, ChefHat, Wallet, CreditCard, Smartphone, ScanLine, Monitor, Tablet,
-  Store, Router, Tag, Scale, Check, Plug, Loader2, Terminal, ArrowRight, ShieldCheck, Zap,
+  Store, Router, Tag, Scale, Check, Plug, Loader2, Terminal, ArrowRight, ShieldCheck, Zap, Activity,
 } from 'lucide-react';
 
 import Reveal from '@/components/site/Reveal';
 import { Pointer } from '@/components/site/Pointer';
 import { useDevices } from '@/hooks/useDevices';
 import { supabase } from '@/lib/supabase';
-import { DEVICE_KINDS, DEVICE_PROMISE, formatCents, type DeviceKindId } from '@/data/platform';
+import {
+  DEVICE_KINDS, DEVICE_PROMISE, HEALTH_CHECK, HEALTH_RULES, formatCents, type DeviceKindId,
+} from '@/data/platform';
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Printer, ChefHat, Wallet, CreditCard, Smartphone, ScanLine, Monitor, Tablet, Store, Router, Tag, Scale,
 };
+
 
 const DeviceHub: React.FC = () => {
   const { paired, statusOf, pair, run, testAll, log, clearLog } = useDevices();
@@ -228,6 +231,35 @@ const DeviceHub: React.FC = () => {
           ))}
         </div>
 
+        {/* Watched all day, and it stops you ringing food you cannot cook */}
+        <Reveal className="mt-8">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.03] p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-red-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-200">
+                  <Activity className="h-3.5 w-3.5" /> {HEALTH_CHECK.label}
+                </span>
+                <h3 className="mt-3 text-2xl font-extrabold text-white">
+                  Every device is checked all day — and a dark printer stops the register
+                </h3>
+              </div>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-extrabold text-slate-900 transition hover:scale-[1.03]"
+              >
+                Open the station monitor <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {HEALTH_RULES.map((r) => (
+                <div key={r} className="flex items-start gap-2 rounded-xl bg-white/5 p-4 text-sm text-white/75">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {r}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+
         <div className="mt-8">
           <Link
             to="/shop"
@@ -236,6 +268,7 @@ const DeviceHub: React.FC = () => {
             Shop the hardware <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+
       </div>
     </section>
   );
