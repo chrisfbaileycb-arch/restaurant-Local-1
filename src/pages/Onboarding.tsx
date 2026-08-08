@@ -150,38 +150,49 @@ const Onboarding: React.FC = () => {
 
   return (
     <PageShell>
-      <div className="border-b border-stone-200 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-          <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">
-            <Sparkles className="h-3.5 w-3.5" /> No-code launch wizard
+      <div className="relative overflow-hidden border-b border-orange-100 bg-gradient-to-br from-fuchsia-50 via-white to-amber-50">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 animate-blob rounded-full bg-fuchsia-300/30 blur-3xl" />
+        <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6">
+          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-500 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow">
+            <Sparkles className="h-3.5 w-3.5 animate-wiggle" /> No-code launch wizard
           </span>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-stone-900">Build your whole store</h1>
-          <p className="mt-2 max-w-2xl text-stone-600">
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">
+            Build your <span className="text-gradient-vibe">whole store</span>
+          </h1>
+          <p className="mt-2 max-w-2xl text-slate-600">
             Four steps. Your real menu becomes a POS layout, an ordering site, a one-page website and a rewards program.
           </p>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-4">
+          <div className="mt-6 h-2 w-full overflow-hidden rounded-full bg-white shadow-inner">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 via-orange-500 to-emerald-400 transition-all duration-700 ease-out"
+              style={{ width: `${(step / LAUNCH_STEPS.length) * 100}%` }}
+            />
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
             {LAUNCH_STEPS.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setStep(s.id)}
                 className={`rounded-xl border p-3 text-left transition ${
                   step === s.id
-                    ? 'border-stone-900 bg-stone-900 text-white'
+                    ? 'border-transparent bg-gradient-to-br from-fuchsia-600 to-orange-500 text-white shadow-lg'
                     : step > s.id
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                    : 'border-stone-200 bg-white text-stone-600 hover:border-stone-400'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-slate-200 bg-white text-slate-500 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow'
                 }`}
               >
                 <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide">
-                  {step > s.id ? <Check className="h-3.5 w-3.5" /> : <span>Step {s.id}</span>}
+                  {step > s.id ? <Check className="h-3.5 w-3.5 animate-pop-in" /> : <span>Step {s.id}</span>}
                 </span>
-                <span className="mt-1 block text-sm font-semibold">{s.title}</span>
+                <span className="mt-1 block text-sm font-extrabold">{s.title}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
+
 
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         {/* STEP 1 */}
@@ -221,10 +232,11 @@ const Onboarding: React.FC = () => {
             <button
               onClick={() => setStep(2)}
               disabled={!type}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3.5 font-bold text-white disabled:opacity-50"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-orange-500 px-6 py-3.5 font-extrabold text-white shadow-lg shadow-orange-500/25 transition hover:scale-[1.03] disabled:opacity-50 disabled:hover:scale-100"
             >
-              Continue <ArrowRight className="h-4 w-4" />
+              Continue <ArrowRight className="h-4 w-4 animate-bob-x" />
             </button>
+
           </section>
         )}
 
@@ -236,7 +248,7 @@ const Onboarding: React.FC = () => {
               A photo of your board, a PDF, a spreadsheet — anything. Our AI reads items, prices, sizes and modifiers.
             </p>
 
-            <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-white p-12 text-center transition hover:border-amber-500 hover:bg-amber-50/40">
+            <label className="group mt-6 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-fuchsia-300 bg-gradient-to-br from-fuchsia-50/60 via-white to-amber-50/60 p-12 text-center transition hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-lg">
               <input
                 type="file"
                 className="hidden"
@@ -246,10 +258,13 @@ const Onboarding: React.FC = () => {
                   if (f) handleFile(f);
                 }}
               />
-              <Upload className="h-10 w-10 text-stone-400" />
-              <p className="mt-3 font-semibold text-stone-900">Drop your menu here or click to browse</p>
-              <p className="mt-1 text-sm text-stone-500">JPG, PNG, PDF, CSV or TXT · photos work best</p>
+              <span className="flex h-16 w-16 animate-float items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-orange-500 text-white shadow-lg">
+                <Upload className="h-8 w-8" />
+              </span>
+              <p className="mt-4 font-extrabold text-slate-900">Drop your menu here or click to browse</p>
+              <p className="mt-1 text-sm text-slate-500">JPG, PNG, PDF, CSV or TXT · photos work best</p>
             </label>
+
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button
@@ -321,10 +336,11 @@ const Onboarding: React.FC = () => {
               <button
                 onClick={() => setStep(3)}
                 disabled={!menu}
-                className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3 font-bold text-white disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-orange-500 px-6 py-3 font-extrabold text-white shadow-lg shadow-orange-500/25 transition hover:scale-[1.03] disabled:opacity-50 disabled:hover:scale-100"
               >
-                Review my build <ArrowRight className="h-4 w-4" />
+                Review my build <ArrowRight className="h-4 w-4 animate-bob-x" />
               </button>
+
             </div>
           </section>
         )}
@@ -423,11 +439,12 @@ const Onboarding: React.FC = () => {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3 font-bold text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-lime-500 px-6 py-3 font-extrabold text-white shadow-lg shadow-emerald-500/25 transition hover:scale-[1.03] disabled:opacity-60"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
                 {saving ? 'Saving your menu…' : 'Save menu & go live'}
               </button>
+
             </div>
           </section>
         )}

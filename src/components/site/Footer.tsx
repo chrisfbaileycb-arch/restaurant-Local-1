@@ -18,17 +18,20 @@ const Footer: React.FC = () => {
   }, []);
 
   return (
-    <footer className="bg-stone-900 text-stone-300">
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
+    <footer className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 text-slate-300">
+      <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 animate-blob rounded-full bg-fuchsia-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-16 bottom-0 h-72 w-72 animate-blob rounded-full bg-amber-400/15 blur-3xl [animation-delay:5s]" />
+      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 text-white">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-stone-900">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-orange-500 text-white shadow-lg">
                 <Flame className="h-5 w-5" />
               </span>
               <span className="text-lg font-extrabold">{BRAND.name}</span>
             </div>
-            <p className="mt-4 max-w-sm text-sm text-stone-400">{BRAND.subtitle}</p>
+            <p className="mt-4 max-w-sm text-sm text-slate-400">{BRAND.subtitle}</p>
+
             <div className="mt-6 max-w-md">
               <SignupForm
                 source="footer-signup"

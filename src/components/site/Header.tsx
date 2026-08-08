@@ -32,10 +32,12 @@ const Header: React.FC = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-stone-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-orange-100 bg-white/90 backdrop-blur-md">
+      <div className="h-1 w-full animate-gradient-x bg-gradient-to-r from-fuchsia-500 via-orange-500 to-amber-400 bg-[length:200%_200%]" />
+
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2 font-extrabold tracking-tight text-stone-900">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-amber-400">
+        <Link to="/" className="group flex items-center gap-2 font-extrabold tracking-tight text-slate-900">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-orange-500 text-white shadow-md transition group-hover:animate-wiggle">
             <Flame className="h-5 w-5" />
           </span>
           <span className="text-lg">{BRAND.name}</span>
@@ -46,7 +48,7 @@ const Header: React.FC = () => {
             <Link
               key={l.to}
               to={l.to}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-orange-50 hover:text-orange-600"
             >
               {l.label}
             </Link>
@@ -56,17 +58,17 @@ const Header: React.FC = () => {
             onMouseEnter={() => setOpenShop(true)}
             onMouseLeave={() => setOpenShop(false)}
           >
-            <button className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900">
-              Collections <ChevronDown className="h-4 w-4" />
+            <button className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-orange-50 hover:text-orange-600">
+              Collections <ChevronDown className={`h-4 w-4 transition ${openShop ? 'rotate-180' : ''}`} />
             </button>
             {openShop && collections.length > 0 && (
-              <div className="absolute left-0 top-full w-64 rounded-xl border border-stone-200 bg-white p-2 shadow-xl">
+              <div className="absolute left-0 top-full w-64 animate-pop-in rounded-xl border border-orange-100 bg-white p-2 shadow-xl">
                 {collections.map((c) => (
                   <Link
                     key={c.id}
                     to={`/collections/${c.handle}`}
                     onClick={() => setOpenShop(false)}
-                    className="block rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-amber-50 hover:text-stone-900"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-amber-50 hover:text-orange-600"
                   >
                     {c.title}
                   </Link>
@@ -79,12 +81,12 @@ const Header: React.FC = () => {
         <div className="ml-auto flex items-center gap-2">
           <Link
             to="/cart"
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg text-stone-700 hover:bg-stone-100"
+            className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 transition hover:bg-orange-50 hover:text-orange-600"
             aria-label="Cart"
           >
             <ShoppingCart className="h-5 w-5" />
             {count > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-stone-900">
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 animate-pop-in items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-orange-500 px-1 text-[11px] font-bold text-white">
                 {count}
               </span>
             )}
@@ -95,26 +97,26 @@ const Header: React.FC = () => {
                 await signOut();
                 navigate('/');
               }}
-              className="hidden items-center gap-2 rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 sm:flex"
+              className="hidden items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex"
             >
               <LogOut className="h-4 w-4" /> Sign out
             </button>
           ) : (
             <Link
               to="/login"
-              className="hidden rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 sm:block"
+              className="hidden rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:block"
             >
               Sign in
             </Link>
           )}
           <Link
             to="/onboarding"
-            className="hidden rounded-lg bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 md:block"
+            className="hidden rounded-lg bg-gradient-to-r from-fuchsia-600 to-orange-500 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-orange-500/25 transition hover:scale-[1.04] md:block"
           >
             Start free
           </Link>
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-stone-700 hover:bg-stone-100 lg:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 transition hover:bg-orange-50 lg:hidden"
             onClick={() => setMobile((m) => !m)}
             aria-label="Menu"
           >
@@ -123,20 +125,21 @@ const Header: React.FC = () => {
         </div>
       </div>
 
+
       {mobile && (
-        <div className="border-t border-stone-200 bg-white px-4 py-3 lg:hidden">
+        <div className="animate-slide-in border-t border-orange-100 bg-white px-4 py-3 lg:hidden">
           {PLATFORM_LINKS.map((l) => (
             <Link
               key={l.to}
               to={l.to}
               onClick={() => setMobile(false)}
-              className="block rounded-lg px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+              className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-amber-50 hover:text-orange-600"
             >
               {l.label}
             </Link>
           ))}
-          <div className="mt-2 border-t border-stone-200 pt-2">
-            <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          <div className="mt-2 border-t border-orange-100 pt-2">
+            <p className="px-3 pb-1 text-xs font-bold uppercase tracking-wide text-fuchsia-500">
               Collections
             </p>
             {collections.map((c) => (
@@ -144,7 +147,7 @@ const Header: React.FC = () => {
                 key={c.id}
                 to={`/collections/${c.handle}`}
                 onClick={() => setMobile(false)}
-                className="block rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-stone-100"
+                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-amber-50 hover:text-orange-600"
               >
                 {c.title}
               </Link>
@@ -153,12 +156,13 @@ const Header: React.FC = () => {
           <Link
             to={user ? '/dashboard' : '/login'}
             onClick={() => setMobile(false)}
-            className="mt-2 block rounded-lg bg-stone-900 px-3 py-2 text-center text-sm font-semibold text-white"
+            className="mt-2 block rounded-lg bg-gradient-to-r from-fuchsia-600 to-orange-500 px-3 py-2 text-center text-sm font-extrabold text-white"
           >
             {user ? 'My dashboard' : 'Sign in'}
           </Link>
         </div>
       )}
+
     </header>
   );
 };
