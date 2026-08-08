@@ -18,6 +18,7 @@ import Onboarding from "./pages/Onboarding";
 import POS from "./pages/POS";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import StarterKit from "./pages/StarterKit";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/shop" element={<Shop />} />
+                <Route path="/starter" element={<StarterKit />} />
                 <Route path="/collections/:handle" element={<CollectionPage />} />
                 <Route path="/products/:handle" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />

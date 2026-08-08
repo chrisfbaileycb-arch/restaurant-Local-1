@@ -476,11 +476,17 @@ const Onboarding: React.FC = () => {
               <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-5">
                 <p className="font-bold text-stone-900">Need the hardware too?</p>
                 <p className="mt-1 text-sm text-stone-600">
-                  We recommend the {concept?.label || 'counter service'} kit for your concept.
+                  We recommend the {concept?.label || 'counter service'} kit for your concept — or start with the
+                  budget setup and add gear later. Food trucks can run on a phone for about $159.
                 </p>
-                <Link to="/shop" className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-amber-700 hover:text-amber-800">
-                  See recommended gear <ArrowRight className="h-4 w-4" />
-                </Link>
+                <div className="mt-3 flex flex-wrap gap-4">
+                  <Link to="/starter" className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-800">
+                    Cheapest way to open <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link to="/shop" className="inline-flex items-center gap-2 text-sm font-bold text-amber-700 hover:text-amber-800">
+                    See recommended gear <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
             </div>
             <div className="h-fit rounded-3xl bg-stone-900 p-6">

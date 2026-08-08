@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Truck } from 'lucide-react';
+import { Search, Truck, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/site/PageShell';
 import ProductCard from '@/components/ProductCard';
@@ -67,6 +67,23 @@ const Shop: React.FC = () => {
           <p className="mt-2 max-w-2xl text-stone-600">
             Everything ships pre-configured with your menu already loaded. Free shipping on all orders.
           </p>
+          <Link
+            to="/starter"
+            className="mt-5 flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition hover:border-emerald-400 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span className="flex items-start gap-3">
+              <Wallet className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+              <span>
+                <span className="block font-bold text-stone-900">On a tight budget? Start from $49.</span>
+                <span className="block text-sm text-stone-600">
+                  Cheap tablets, stands, cash drawer, tap reader, printers — plus a phone-only setup for food trucks.
+                </span>
+              </span>
+            </span>
+            <span className="shrink-0 rounded-xl bg-stone-900 px-5 py-2.5 text-center text-sm font-semibold text-white">
+              Build a budget kit
+            </span>
+          </Link>
           <div className="mt-6 flex flex-wrap gap-2">
             {collections.map((c) => (
               <Link
@@ -80,6 +97,7 @@ const Shop: React.FC = () => {
           </div>
         </div>
       </div>
+
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">

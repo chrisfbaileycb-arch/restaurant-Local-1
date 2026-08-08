@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Monitor, ShoppingBag, Globe, Gift, CalendarDays, BarChart3, CreditCard, Package,
-  ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck,
+  ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck, Wallet,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/site/Header';
@@ -400,6 +400,79 @@ const AppLayout: React.FC = () => {
           </Link>
         </div>
       </section>
+
+      {/* ---------------- BUDGET / NO STICKER SHOCK ---------------- */}
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="grid gap-8 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-7 lg:grid-cols-[1fr_.9fr] lg:p-10">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                <Wallet className="h-3.5 w-3.5" /> No sticker shock
+              </span>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-stone-900">
+                Start cheap. Add gear when business is good.
+              </h2>
+              <p className="mt-3 max-w-xl text-stone-700">
+                You do not need a $1,300 terminal to open. Run Vibe OS on the phone in your pocket, or build a real
+                touchscreen counter with a $149 tablet, a $39 stand, an $89 locking cash drawer, a $49 tap reader and
+                cheap thermal printers for the guest and the line.
+              </p>
+              <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+                {[
+                  'Phone-only mode for food trucks',
+                  '10" touchscreen tablet — $149',
+                  'Countertop & truck tablet mounts',
+                  'Compact locking cash drawer — $89',
+                  'Guest receipt printer — $99',
+                  'Kitchen ticket printer — $149',
+                ].map((b) => (
+                  <li key={b} className="flex items-start gap-2 text-sm text-stone-800">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {b}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  to="/starter"
+                  className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3.5 font-bold text-white transition hover:bg-stone-800"
+                >
+                  Build a budget kit <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/collections/budget-starter"
+                  className="rounded-xl border border-stone-300 bg-white px-6 py-3.5 font-semibold text-stone-800 transition hover:bg-stone-50"
+                >
+                  See everything under $150
+                </Link>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+              {[
+                { name: 'Phone Only', price: '$159', who: 'Food trucks & pop-ups', detail: 'Window mount + tap reader + receipt printer. Use your own phone.' },
+                { name: 'One Tablet Counter', price: '$336', who: 'Coffee, cookies, smoothies', detail: '10" tablet, swivel stand, tap reader and guest receipts.' },
+                { name: 'Counter + Kitchen', price: '$577', who: 'Bakeries & quick-service', detail: 'Adds locking cash drawer and a ticket printer on the line.' },
+              ].map((k) => (
+                <Link
+                  key={k.name}
+                  to="/starter"
+                  className="flex flex-col rounded-2xl border border-stone-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+                >
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-bold text-stone-900">{k.name}</span>
+                    <span className="text-xl font-extrabold text-emerald-700">{k.price}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-amber-700">{k.who}</p>
+                  <p className="mt-2 text-sm text-stone-600">{k.detail}</p>
+                </Link>
+              ))}
+              <p className="text-center text-xs text-stone-500">
+                Software is $0/mo on Starter · free shipping · no install or contract fees.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {/* ---------------- PARTNERS / AFFILIATE ---------------- */}
       <section className="bg-stone-100 py-16">

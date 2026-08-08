@@ -67,6 +67,7 @@ const Footer: React.FC = () => {
             <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Shop</h4>
             <ul className="space-y-2 text-sm">
               <li><Link className="hover:text-amber-400" to="/shop">All hardware</Link></li>
+              <li><Link className="hover:text-amber-400" to="/starter">Budget starter kits</Link></li>
               {collections.map((c) => (
                 <li key={c.id}>
                   <Link className="hover:text-amber-400" to={`/collections/${c.handle}`}>

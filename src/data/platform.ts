@@ -273,3 +273,44 @@ export const SHIFTS = [
 ];
 
 export const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// ---------------- Budget / no-sticker-shock starter plans ----------------
+// Each plan references product handles that live in ecom_products (single source of truth).
+export interface StarterPlan {
+  id: string;
+  name: string;
+  who: string;
+  handles: string[];
+  note: string;
+}
+
+export const STARTER_PLANS: StarterPlan[] = [
+  {
+    id: 'phone',
+    name: 'Phone Only',
+    who: 'Food trucks, farmers markets, pop-ups, carts',
+    handles: ['phone-pos-starter-kit'],
+    note: 'Use the phone already in your pocket. Mount, tap reader and receipt printer — nothing else to buy.',
+  },
+  {
+    id: 'tablet',
+    name: 'One Tablet Counter',
+    who: 'Coffee, cookie, smoothie & ice cream shops',
+    handles: [
+      'vibe-tab-10-budget-touchscreen',
+      'countertop-tablet-stand',
+      'tap-only-card-reader',
+      'mini-receipt-printer-bluetooth',
+    ],
+    note: 'A real touchscreen station for the price of a month of most POS contracts.',
+  },
+  {
+    id: 'counter-kitchen',
+    name: 'Counter + Kitchen',
+    who: 'Bakeries, quick-service restaurants with a line',
+    handles: ['vibe-tab-10-budget-touchscreen', 'byo-tablet-counter-kit', 'kitchen-ticket-printer-wifi'],
+    note: 'Adds a locking cash drawer and a ticket printer on the line so nothing gets shouted twice.',
+  },
+];
+
+export const BUDGET_TAG = 'budget';

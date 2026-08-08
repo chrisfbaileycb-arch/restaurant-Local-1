@@ -10,6 +10,7 @@ const PLATFORM_LINKS = [
   { to: '/onboarding', label: 'Build my store' },
   { to: '/pos', label: 'POS demo' },
   { to: '/dashboard', label: 'Reports & team' },
+  { to: '/starter', label: 'Start cheap' },
   { to: '/shop', label: 'Hardware shop' },
 ];
 
