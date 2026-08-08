@@ -10,10 +10,12 @@ import { useAuth } from '@/contexts/AuthContext';
 const PLATFORM_LINKS = [
   { to: '/onboarding', label: 'Build my store' },
   { to: '/pos', label: 'POS demo' },
-  { to: '/dashboard', label: 'Reports & team' },
+  { to: '/#website', label: 'Website hosting' },
+  { to: '/#pricing', label: 'Pricing' },
   { to: '/starter', label: 'Start cheap' },
   { to: '/shop', label: 'Hardware shop' },
 ];
+
 
 const Header: React.FC = () => {
   const { count } = useCart();

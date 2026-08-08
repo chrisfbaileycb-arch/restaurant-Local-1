@@ -82,11 +82,12 @@ export const FEATURES: Feature[] = [
   },
   {
     id: 'website',
-    title: 'One-page website in minutes',
-    body: 'Hours, location, menu, order button, reviews and photos — generated from your menu upload and live on your own domain the same day.',
+    title: 'One-page website, hosted',
+    body: 'A single fast page: order button, menu place cards from your own photos, hours pulled live from Google, contact, a hiring form and your social links. We host it, renew it and keep it up.',
     icon: 'Globe',
-    bullets: ['Auto-built from your menu', 'Custom domain + SSL', 'Google Business sync', 'Mobile-first & fast'],
+    bullets: ['Hosting, domain & SSL included', 'Hours synced from Google Business', 'Photos cross-populate from the POS', 'Contact + employment application'],
   },
+
   {
     id: 'rewards',
     title: 'Rewards people actually use',
@@ -190,36 +191,145 @@ export const calcProcessingCost = (p: Processor, monthlyVolume: number, avgTicke
 };
 
 // ---------------- Software plans ----------------
-export const PLANS = [
+// One product, one price. The only choice is whether we host your website too.
+export const SETUP_FEE = 100;
+export const HOSTING_DISCOUNT = 50;
+
+export interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  per: string;
+  blurb: string;
+  features: string[];
+  cta: string;
+  highlight?: boolean;
+  hosting: boolean;
+}
+
+export const PLANS: Plan[] = [
   {
-    id: 'starter',
-    name: 'Starter',
-    price: 0,
-    per: '/mo + processing',
-    blurb: 'One terminal, one menu, everything essential.',
-    features: ['1 POS station', 'Online ordering site', 'One-page website', 'Punch-card rewards', 'Daily & weekly reports'],
-    cta: 'Start free',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: 79,
+    id: 'pos-web',
+    name: 'POS + Website',
+    price: 199,
     per: '/mo per location',
-    blurb: 'The full operating system for a growing shop.',
-    features: ['Unlimited stations & phones', 'LTE failover + offline queue', 'Points, tiers & cash back', 'Scheduling + labor vs sales', 'Sales tax & P&L reporting', 'Least-cost card routing'],
-    cta: 'Most popular',
+    blurb: 'Everything below, plus we host and maintain your one-page website.',
+    hosting: true,
+    features: [
+      'Everything in POS Only',
+      'One-page website, hosted by us',
+      'Your domain + SSL, renewed for you',
+      'Online ordering built into the page',
+      'Hours pulled live from Google Business',
+      'Menu photos cross-populate from your POS',
+      'Contact + hiring forms straight to your inbox',
+    ],
+    cta: 'Start my build',
     highlight: true,
   },
   {
-    id: 'growth',
-    name: 'Growth',
+    id: 'pos-only',
+    name: 'POS Only',
     price: 149,
     per: '/mo per location',
-    blurb: 'Multi-location, catering and franchise ready.',
-    features: ['Everything in Pro', 'Multi-location dashboards', 'Kiosk & KDS licenses', 'Catering & pre-orders', 'API + accounting sync', 'Dedicated launch manager'],
-    cta: 'Talk to us',
+    blurb: 'Already have a website you love? Keep it and save $50 a month.',
+    hosting: false,
+    features: [
+      'Unlimited stations, tablets & phones',
+      'Offline queue + LTE failover',
+      'Tabs, tickets & station routing',
+      'Rewards, scheduling & labor control',
+      'All 12 reports + tax filings',
+      'Least-cost card routing',
+      'Order link you can drop on any site',
+    ],
+    cta: 'Start my build',
   },
 ];
+
+// How billing actually works — no monthly charge until the build is live.
+export const BILLING_STEPS = [
+  { id: 1, title: 'Pay the $100 setup', body: 'One time, covers menu parsing, POS build, hardware staging and your site.', note: 'Due at signup' },
+  { id: 2, title: 'We build it', body: 'Take a week or take two months — you tell us when you are ready to open.', note: '$0 while you build' },
+  { id: 3, title: 'You approve the build', body: 'Walk the POS, the ordering page and the website. Change anything.', note: 'Still $0' },
+  { id: 4, title: 'Go live — billing starts', body: 'The first monthly charge lands the day you take your first real order.', note: '$149 or $199/mo' },
+];
+
+// ---------------- Hosted one-page website ----------------
+// Deliberately short. Guests come to look at food and order, not to read.
+export interface SiteBlock {
+  id: string;
+  title: string;
+  icon: string;
+  body: string;
+  source: string; // where the content comes from — the whole point
+  bullets: string[];
+}
+
+export const SITE_BLOCKS: SiteBlock[] = [
+  {
+    id: 'order',
+    title: 'Order online',
+    icon: 'ShoppingBag',
+    body: 'The order button is the hero of the page. Guests pick items, choose pickup or delivery hand-off and pay — no commission taken.',
+    source: 'Built from your POS menu',
+    bullets: ['Same menu as the POS, always', 'Pickup windows & curbside notes', 'Apple Pay / Google Pay', 'Orders print to the kitchen'],
+  },
+  {
+    id: 'cards',
+    title: 'Menu place cards',
+    icon: 'ImageIcon',
+    body: 'Snap a photo of a dish in your owner dashboard and the place card appears on the website automatically. We never touch it.',
+    source: 'Owner dashboard → POS → website',
+    bullets: ['Photo, description & price', 'Mark a dish sold out from the POS', 'Reorder cards by drag', 'Seasonal specials in one tap'],
+  },
+  {
+    id: 'hours',
+    title: 'Hours that match Google',
+    icon: 'Clock',
+    body: 'We read your Google Business Profile, so the hours on your website are the hours a guest sees on Google Maps. Change them once, in Google.',
+    source: 'Google Business Profile sync',
+    bullets: ['Re-checks every hour', 'Holiday & special hours included', 'Open / closed badge in real time', 'Address & phone stay in sync too'],
+  },
+  {
+    id: 'contact',
+    title: 'Contact & directions',
+    icon: 'MapPin',
+    body: 'Phone, address, a map pin and a short message form. Everything a guest needs in one thumb-scroll.',
+    source: 'Google Business Profile sync',
+    bullets: ['Tap-to-call & tap-to-map', 'Message form to your inbox', 'Parking / patio notes', 'Reply from your phone'],
+  },
+  {
+    id: 'hiring',
+    title: 'Employment application',
+    icon: 'ClipboardList',
+    body: 'A "Now hiring" form for line cooks, servers and drivers. Applications land in your dashboard instead of a shoebox by the register.',
+    source: 'Built in, toggle on or off',
+    bullets: ['Role, availability & experience', 'Applications in your dashboard', 'Turn off when fully staffed', 'Email alert on each apply'],
+  },
+  {
+    id: 'social',
+    title: 'Social links',
+    icon: 'Share2',
+    body: 'Instagram, Facebook, TikTok and Google reviews in the footer, so the people who love you can go follow you.',
+    source: 'You paste the links once',
+    bullets: ['Instagram / Facebook / TikTok', 'Google review shortcut', 'Share sheet on mobile', 'Open Graph preview image'],
+  },
+];
+
+// Demo hours shown in the animated website preview (mirrors a Google profile).
+export const DEMO_HOURS = [
+  { day: 'Mon', hours: 'Closed' },
+  { day: 'Tue', hours: '11a – 9p' },
+  { day: 'Wed', hours: '11a – 9p' },
+  { day: 'Thu', hours: '11a – 9p' },
+  { day: 'Fri', hours: '11a – 11p' },
+  { day: 'Sat', hours: '10a – 11p' },
+  { day: 'Sun', hours: '10a – 8p' },
+];
+
+export const SOCIAL_LINKS = ['Instagram', 'Facebook', 'TikTok', 'Google Reviews'];
+
 
 // ---------------- Affiliate / partner services ----------------
 export const PARTNER_SERVICES = [

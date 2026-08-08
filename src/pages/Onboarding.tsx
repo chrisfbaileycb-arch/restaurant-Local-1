@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import PageShell from '@/components/site/PageShell';
 import SignupForm from '@/components/site/SignupForm';
-import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents } from '@/data/platform';
+import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents, PLANS, SETUP_FEE, HOSTING_DISCOUNT } from '@/data/platform';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { parseMenuFile, parseMenuText, saveParsedMenu, loadShopMenu } from '@/lib/menuStore';
 import type { ParsedMenu } from '@/lib/menuStore';
@@ -50,6 +51,8 @@ const Onboarding: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [savedShopId, setSavedShopId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState('');
+  const [wantsSite, setWantsSite] = useState(true); // website hosting on by default
+
 
   useEffect(() => {
     const t = params.get('type');
@@ -391,20 +394,51 @@ const Onboarding: React.FC = () => {
                 <div className="mt-4 overflow-hidden rounded-lg border border-stone-200">
                   <div className="bg-stone-900 p-3">
                     <p className="text-sm font-extrabold text-white">{shopName || menu.shop_name || 'Your Shop'}</p>
-                    <p className="text-[10px] text-amber-400">{concept?.label || 'Local favorite'} · Open today 7a–7p</p>
+                    <p className="text-[10px] text-amber-400">{concept?.label || 'Local favorite'} · Hours from Google</p>
                   </div>
                   <div className="space-y-1.5 p-3">
-                    {menu.categories.slice(0, 4).map((c) => (
-                      <p key={c.name} className="text-[10px] font-semibold text-stone-600">
-                        {c.name} · {c.items.length} items
-                      </p>
+                    {['Order online', 'Menu place cards', 'Hours & contact', 'Now hiring', 'Social links'].map((b) => (
+                      <p key={b} className="text-[10px] font-semibold text-stone-600">{b}</p>
                     ))}
                     <div className="mt-2 h-6 w-24 rounded bg-amber-500" />
                   </div>
                 </div>
-                <p className="mt-3 text-xs text-stone-500">Custom domain + SSL included</p>
+                <p className="mt-3 text-xs text-stone-500">Hosting, domain + SSL included on the ${PLANS[0].price} plan</p>
               </div>
             </div>
+
+            {/* Website hosting choice */}
+            <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/60 p-6">
+              <p className="flex items-center gap-2 font-bold text-stone-900">
+                <Globe className="h-4 w-4 text-rose-600" /> Do you want us to host your website?
+              </p>
+              <p className="mt-1 text-sm text-stone-600">
+                One page with your ordering menu, photo place cards, Google-synced hours, contact, a hiring form and
+                social links. Already have a site you like? Skip it and save ${HOSTING_DISCOUNT} a month.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {PLANS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setWantsSite(p.hosting)}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      wantsSite === p.hosting ? 'border-rose-500 bg-white shadow-md ring-2 ring-rose-200' : 'border-stone-200 bg-white hover:border-stone-400'
+                    }`}
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-bold text-stone-900">{p.name}</span>
+                      <span className="text-xl font-extrabold text-rose-600">${p.price}<span className="text-xs font-semibold text-stone-500">/mo</span></span>
+                    </div>
+                    <p className="mt-1 text-xs text-stone-600">{p.blurb}</p>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-xs font-semibold text-stone-600">
+                ${SETUP_FEE} one-time setup today · your ${wantsSite ? PLANS[0].price : PLANS[1].price}/mo does not start
+                until your build goes live.
+              </p>
+            </div>
+
 
             <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6">
               <p className="flex items-center gap-2 font-bold text-stone-900"><Gift className="h-4 w-4 text-amber-600" /> Pick your rewards program</p>
@@ -480,16 +514,19 @@ const Onboarding: React.FC = () => {
               <ul className="mt-6 space-y-2 text-sm text-stone-700">
                 {[
                   'POS layout published to every station and phone',
-                  'Ordering site live on your domain within 48 hours',
+                  wantsSite
+                    ? 'One-page website hosted by us — ordering, Google hours, contact, hiring form & socials'
+                    : 'Order link ready to drop on the website you already have',
                   `${REWARD_PROGRAMS.find((r) => r.id === reward)?.name} rewards switched on`,
                   'Reports, sales tax and payroll exports enabled',
-                  'Free processing rate audit scheduled',
+                  `$${SETUP_FEE} setup today — your $${wantsSite ? PLANS[0].price : PLANS[1].price}/mo starts at go-live`,
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {t}
                   </li>
                 ))}
               </ul>
+
               <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-5">
                 <p className="font-bold text-stone-900">Need the hardware too?</p>
                 <p className="mt-1 text-sm text-stone-600">

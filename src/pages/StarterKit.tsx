@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/site/PageShell';
 import BudgetBuilder from '@/components/site/BudgetBuilder';
 import ProductCard from '@/components/ProductCard';
-import { BUDGET_TAG, formatCents } from '@/data/platform';
+import { BUDGET_TAG, formatCents, SETUP_FEE, PLANS } from '@/data/platform';
+
 
 const PROMISES = [
   {
@@ -26,7 +27,7 @@ const PROMISES = [
   {
     icon: Wallet,
     title: 'No big first payout',
-    body: '$0/mo software on Starter, free shipping, and nothing due for install or setup. Buy one piece at a time.',
+    body: `Just a $${SETUP_FEE} one-time setup, free shipping and nothing due for install. Monthly software does not start until you go live.`,
   },
 ];
 
@@ -34,8 +35,6 @@ const FAQS = [
   {
     q: 'Do I have to buy a terminal to start?',
     a: 'No. Love Local Eats POS runs in a browser on the phone or tablet you already own. Hardware is optional — most trucks start with just a $49 tap reader.',
-
-
   },
   {
     q: 'What happens when the WiFi or cell signal drops?',
@@ -46,10 +45,15 @@ const FAQS = [
     a: 'Yes. Every device pairs to the same menu and reports. Add a cash drawer in month two and a kitchen printer in month six — nothing gets rebuilt.',
   },
   {
-    q: 'Is there a contract or install fee?',
-    a: 'Never. Starter is $0/mo, shipping is free on all orders, and you can stop any time. We make money on processing and hardware, not lock-in.',
+    q: 'What does the software actually cost?',
+    a: `$${PLANS[1].price}/mo per location for the POS, or $${PLANS[0].price}/mo if we also host your one-page website with online ordering, Google-synced hours, contact, hiring form and menu photos. Both are month to month.`,
+  },
+  {
+    q: 'When does billing start?',
+    a: `You pay a $${SETUP_FEE} setup fee when you sign up, and nothing else while we build. Take two weeks or take two months — the monthly charge only begins the day your build goes live and you start taking orders.`,
   },
 ];
+
 
 const StarterKit: React.FC = () => {
   const [budget, setBudget] = useState<any[]>([]);
@@ -103,8 +107,9 @@ const StarterKit: React.FC = () => {
               <Truck className="h-4 w-4 text-emerald-400" /> Free shipping on everything
             </span>
             <span className="inline-flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" /> $0/mo software on Starter
+              <ShieldCheck className="h-4 w-4 text-emerald-400" /> ${SETUP_FEE} setup · billing starts at go-live
             </span>
+
             <span className="inline-flex items-center gap-2">
               <Wallet className="h-4 w-4 text-emerald-400" />
               {cheapest != null ? `Cheapest way in: ${formatCents(cheapest)}` : 'Start from under $50'}

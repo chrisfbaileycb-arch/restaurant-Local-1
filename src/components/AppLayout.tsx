@@ -14,12 +14,15 @@ import Reveal from '@/components/site/Reveal';
 import { Pointer, TapRing } from '@/components/site/Pointer';
 import FlowShowcase from '@/components/site/FlowShowcase';
 import ServiceFloor from '@/components/site/ServiceFloor';
+import SiteHosting from '@/components/site/SiteHosting';
+import Pricing from '@/components/site/Pricing';
 
 import {
   BRAND, HERO_IMAGE, FEATURES, STATS, BUSINESS_TYPES, LAUNCH_STEPS, REPORTS,
-  REWARD_PROGRAMS, PROCESSORS, PLANS, PARTNER_SERVICES, TESTIMONIALS,
-  calcProcessingCost, formatMoney,
+  REWARD_PROGRAMS, PROCESSORS, PARTNER_SERVICES, TESTIMONIALS,
+  SETUP_FEE, PLANS, calcProcessingCost, formatMoney,
 } from '@/data/platform';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
 import type { LoadedMenu } from '@/lib/menuStore';
@@ -303,6 +306,10 @@ const AppLayout: React.FC = () => {
       {/* ---------------- SERVICE FLOOR (roles, tabs, ticket routing) ---------------- */}
       <ServiceFloor />
 
+      {/* ---------------- HOSTED ONE-PAGE WEBSITE ---------------- */}
+      <SiteHosting />
+
+
 
       {/* ---------------- REPORTS ---------------- */}
       <section className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-700 to-fuchsia-700 py-16">
@@ -568,8 +575,10 @@ const AppLayout: React.FC = () => {
                 </Link>
               ))}
               <p className="text-center text-xs text-slate-500">
-                Software is $0/mo on Starter · free shipping · no install or contract fees.
+                Software is ${PLANS[1].price}/mo (${PLANS[0].price} with website hosting) · ${SETUP_FEE} one-time setup ·
+                free shipping · no contract.
               </p>
+
             </div>
           </Reveal>
         </div>
@@ -600,54 +609,8 @@ const AppLayout: React.FC = () => {
       </section>
 
       {/* ---------------- PRICING ---------------- */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <Reveal className="text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Simple software pricing</h2>
-          <p className="mt-3 text-slate-600">No setup fees. No per-order commission. Cancel any month.</p>
-        </Reveal>
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {PLANS.map((p, i) => (
-            <Reveal key={p.id} delay={i * 100}>
-              <div
-                className={`flex h-full flex-col rounded-3xl border p-7 transition ${
-                  p.highlight
-                    ? 'border-transparent bg-gradient-to-br from-violet-700 via-fuchsia-600 to-orange-500 text-white shadow-2xl lg:-translate-y-3'
-                    : 'border-slate-200 bg-white hover:-translate-y-1 hover:shadow-xl'
-                }`}
-              >
-                {p.highlight && (
-                  <span className="mb-3 inline-flex w-fit animate-pop-in rounded-full bg-amber-300 px-3 py-1 text-[11px] font-bold uppercase text-slate-900">
-                    Most popular
-                  </span>
-                )}
-                <h3 className={`text-xl font-extrabold ${p.highlight ? 'text-white' : 'text-slate-900'}`}>{p.name}</h3>
-                <p className={`mt-1 text-sm ${p.highlight ? 'text-white/80' : 'text-slate-600'}`}>{p.blurb}</p>
-                <p className="mt-5">
-                  <span className={`text-4xl font-extrabold ${p.highlight ? 'text-amber-200' : 'text-slate-900'}`}>
-                    ${p.price}
-                  </span>
-                  <span className={`text-sm ${p.highlight ? 'text-white/70' : 'text-slate-500'}`}>{p.per}</span>
-                </p>
-                <ul className="mt-6 space-y-2">
-                  {p.features.map((f) => (
-                    <li key={f} className={`flex items-start gap-2 text-sm ${p.highlight ? 'text-white/85' : 'text-slate-700'}`}>
-                      <Check className={`mt-0.5 h-4 w-4 shrink-0 ${p.highlight ? 'text-amber-200' : 'text-emerald-500'}`} /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/onboarding"
-                  className={`mt-7 rounded-xl py-3 text-center font-extrabold transition hover:scale-[1.02] ${
-                    p.highlight ? 'bg-white text-violet-700' : 'bg-gradient-to-r from-fuchsia-600 to-orange-500 text-white'
-                  }`}
-                >
-                  {p.cta}
-                </Link>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      <Pricing />
+
 
       {/* ---------------- TESTIMONIALS ---------------- */}
       <section className="bg-white py-16">

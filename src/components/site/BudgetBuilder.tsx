@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Minus, Plus, ShoppingCart, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
-import { formatCents, STARTER_PLANS, BUDGET_TAG } from '@/data/platform';
+import { formatCents, STARTER_PLANS, BUDGET_TAG, PLANS, SETUP_FEE } from '@/data/platform';
+
 
 interface Selection {
   [handle: string]: number; // quantity, 0 / missing = not selected
@@ -241,8 +242,10 @@ const BudgetBuilder: React.FC = () => {
             </button>
           </div>
           <p className="mt-3 text-xs text-stone-400">
-            Software is $0/mo on Starter. No install fee, no contract, no early-termination anything.
+            Software is ${PLANS[1].price}/mo (${PLANS[0].price} with website hosting) plus a one-time ${SETUP_FEE} setup.
+            Monthly billing does not start until your build goes live.
           </p>
+
         </div>
       </div>
     </div>
