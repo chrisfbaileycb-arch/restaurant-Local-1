@@ -15,7 +15,10 @@ import { Pointer, TapRing } from '@/components/site/Pointer';
 import FlowShowcase from '@/components/site/FlowShowcase';
 import ServiceFloor from '@/components/site/ServiceFloor';
 import SiteHosting from '@/components/site/SiteHosting';
+import DeviceHub from '@/components/site/DeviceHub';
+import Failover from '@/components/site/Failover';
 import Pricing from '@/components/site/Pricing';
+
 
 import {
   BRAND, HERO_IMAGE, FEATURES, STATS, BUSINESS_TYPES, LAUNCH_STEPS, REPORTS,
@@ -305,6 +308,12 @@ const AppLayout: React.FC = () => {
 
       {/* ---------------- SERVICE FLOOR (roles, tabs, ticket routing) ---------------- */}
       <ServiceFloor />
+
+      {/* ---------------- DEVICE HUB (hardware actually fires) ---------------- */}
+      <DeviceHub />
+
+      {/* ---------------- CONNECTIVITY FAILOVER / PHONE PIVOT ---------------- */}
+      <Failover />
 
       {/* ---------------- HOSTED ONE-PAGE WEBSITE ---------------- */}
       <SiteHosting />

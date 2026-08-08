@@ -553,3 +553,304 @@ export const DEMO_TICKETS: DemoTicket[] = [
   { id: 'T-120', table: 'Patio 2', station: 'Bar', items: ['2 × Caipirinha'], minutes: 5, server: 'Devon' },
   { id: 'T-121', table: 'Table 9', station: 'Kitchen', items: ['1 × Shrimp Plate', '1 × Side Rice'], minutes: 11, server: 'Marco' },
 ];
+
+// ============================================================
+// Device hub: every piece of hardware we sell can actually be
+// paired, tested and fired from the POS. Nothing here is a shell.
+// ============================================================
+
+export type DeviceKindId =
+  | 'receipt-printer'
+  | 'kitchen-printer'
+  | 'cash-drawer'
+  | 'card-reader'
+  | 'phone-swiper'
+  | 'card-scan'
+  | 'kds'
+  | 'handheld'
+  | 'kiosk'
+  | 'label-printer'
+  | 'lte-router'
+  | 'scale';
+
+export interface DeviceAction {
+  id: string;
+  label: string;
+  /** what the terminal actually sends to the device */
+  command: string;
+  /** the line written to the device log when it succeeds */
+  result: string;
+}
+
+export interface DeviceKind {
+  id: DeviceKindId;
+  name: string;
+  icon: string; // lucide icon name resolved by the consuming component
+  connection: string;
+  tone: string; // tailwind gradient
+  /** shop handles in ecom_products this driver covers (single source of truth) */
+  handles: string[];
+  blurb: string;
+  actions: DeviceAction[];
+  offline: string;
+}
+
+export const DEVICE_KINDS: DeviceKind[] = [
+  {
+    id: 'receipt-printer',
+    name: 'Guest receipt printer',
+    icon: 'Printer',
+    connection: 'USB / LAN / Bluetooth',
+    tone: 'from-sky-500 to-cyan-400',
+    handles: ['vibe-thermal-receipt-printer', 'mini-receipt-printer-bluetooth'],
+    blurb: 'ESC/POS driver built in. Prints the guest copy, the merchant copy and the reprint, and kicks the drawer on the same cable.',
+    actions: [
+      { id: 'test', label: 'Test print', command: 'ESC @ · print test slip', result: 'Test slip printed — 58mm, 32 cols, cut OK' },
+      { id: 'receipt', label: 'Print last receipt', command: 'print(receipt #1042)', result: 'Receipt #1042 reprinted with tip line' },
+      { id: 'status', label: 'Paper status', command: 'DLE EOT 4', result: 'Paper OK · head temp normal · cover closed' },
+    ],
+    offline: 'Prints from the local queue whether or not the internet is up.',
+  },
+  {
+    id: 'kitchen-printer',
+    name: 'Kitchen / bar ticket printer',
+    icon: 'ChefHat',
+    connection: 'WiFi / LAN',
+    tone: 'from-emerald-500 to-teal-400',
+    handles: ['kitchen-ticket-printer-wifi', 'vibe-kitchen-impact-printer'],
+    blurb: 'Routed by menu category on upload — food to the line, cocktails to the bar. Impact heads survive steam and grease.',
+    actions: [
+      { id: 'test', label: 'Fire test ticket', command: 'route(station: Kitchen)', result: 'Ticket T-TEST printed at Kitchen in 0.6s' },
+      { id: 'route', label: 'Show routing map', command: 'get(routing)', result: 'Entrees→Kitchen · Sides→Kitchen · Cocktails→Bar · Cans→Runner' },
+      { id: 'buzz', label: 'Buzzer test', command: 'buzz(2)', result: 'Buzzer fired twice — line heard it over the hood' },
+    ],
+    offline: 'Local network only — tickets keep printing with the internet unplugged.',
+  },
+  {
+    id: 'cash-drawer',
+    name: 'Cash drawer',
+    icon: 'Wallet',
+    connection: 'RJ11 through printer / Bluetooth',
+    tone: 'from-amber-500 to-orange-500',
+    handles: ['vibe-cash-drawer', 'compact-cash-drawer-16'],
+    blurb: 'Opens on cash tender, on a manager no-sale, and never on a card sale. Every open is stamped with the employee.',
+    actions: [
+      { id: 'open', label: 'Open drawer', command: 'kick(pin 2, 120ms)', result: 'Drawer opened · logged as No-Sale by Manager PIN' },
+      { id: 'count', label: 'Start drawer count', command: 'count(start)', result: 'Blind count opened — expected $312.40 hidden until submit' },
+      { id: 'audit', label: 'Open history', command: 'get(opens today)', result: '11 opens today · 9 cash tenders · 2 no-sales (both approved)' },
+    ],
+    offline: 'Fires from the terminal itself — no cloud call in the path.',
+  },
+  {
+    id: 'card-reader',
+    name: 'Tap & chip reader',
+    icon: 'CreditCard',
+    connection: 'Bluetooth / USB',
+    tone: 'from-violet-500 to-indigo-500',
+    handles: ['vibe-tap-chip-reader', 'vibe-pocket-reader', 'tap-only-card-reader'],
+    blurb: 'Tap, chip, swipe, Apple Pay and Google Pay, with least-cost routing chosen per transaction before the card ever leaves the reader.',
+    actions: [
+      { id: 'test', label: 'Run $0.00 test read', command: 'auth(0.00, test)', result: 'Reader armed · test card read · P2PE key verified' },
+      { id: 'route', label: 'Check routing', command: 'get(least-cost path)', result: 'This swipe routes Love Local Direct · 2.15% + $0.08' },
+      { id: 'batch', label: 'Batch out', command: 'batch(close)', result: 'Batch closed · 148 sales · $3,942.18 funding tomorrow' },
+    ],
+    offline: 'Store-and-forward: takes the card offline and settles the second data returns.',
+  },
+  {
+    id: 'phone-swiper',
+    name: 'Phone plug-in swiper',
+    icon: 'Smartphone',
+    connection: 'USB-C / Lightning',
+    tone: 'from-rose-500 to-red-500',
+    handles: ['phone-card-swiper-plugin'],
+    blurb: 'No battery, no pairing, no radio. Plugs into the phone in your apron and reads a card when everything else has quit.',
+    actions: [
+      { id: 'test', label: 'Test swipe', command: 'read(magstripe)', result: 'Track 2 read · encrypted at the head · queued' },
+      { id: 'queue', label: 'Show offline queue', command: 'get(queue)', result: '3 swipes held · auto-settles when data returns' },
+      { id: 'settle', label: 'Settle queue now', command: 'settle(queue)', result: '3 swipes settled · $61.75 captured · 0 declines' },
+    ],
+    offline: 'Designed for it — this is the tool you reach for when the WiFi is gone.',
+  },
+  {
+    id: 'card-scan',
+    name: 'Camera card scan',
+    icon: 'ScanLine',
+    connection: 'Phone camera, no hardware',
+    tone: 'from-fuchsia-500 to-pink-500',
+    handles: ['phone-card-scan-kit'],
+    blurb: 'Last resort with nothing plugged in: the camera recognises the number and expiry on device, masks it instantly and encrypts it for the queue.',
+    actions: [
+      { id: 'scan', label: 'Scan a card', command: 'ocr(card frame)', result: 'Card read •••• 4242 · exp 09/28 · masked before it hit storage' },
+      { id: 'rate', label: 'Rate check', command: 'get(keyed rate)', result: 'Keyed/manual rate applies — 2.9% + $0.15 on this one' },
+      { id: 'clear', label: 'Wipe scan buffer', command: 'wipe(frames)', result: 'Frame buffer wiped · nothing readable stored on the phone' },
+    ],
+    offline: 'Works with zero connectivity — the sale queues like any other.',
+  },
+  {
+    id: 'kds',
+    name: 'Kitchen display',
+    icon: 'Monitor',
+    connection: 'WiFi / Ethernet',
+    tone: 'from-teal-500 to-emerald-400',
+    handles: ['vibe-kitchen-display-22'],
+    blurb: 'Big-type ticket rail with timers that turn red at four minutes, and a bump bar that pings the server who owns the table.',
+    actions: [
+      { id: 'push', label: 'Push a test ticket', command: 'push(T-TEST)', result: 'T-TEST on screen 1 · timer started' },
+      { id: 'bump', label: 'Bump oldest', command: 'bump(oldest)', result: 'T-118 bumped · Alexis pinged: “Table 4 is up”' },
+      { id: 'recall', label: 'Recall last', command: 'recall()', result: 'T-118 back on the rail with original timestamps' },
+    ],
+    offline: 'Talks to the terminal over your local network, not the cloud.',
+  },
+  {
+    id: 'handheld',
+    name: 'Handheld order pad',
+    icon: 'Tablet',
+    connection: 'WiFi / LTE',
+    tone: 'from-indigo-500 to-blue-500',
+    handles: ['vibe-handheld-order-pad', 'vibe-terminal-mini-10'],
+    blurb: 'Take the order and the payment at the table or down the line. Falls back to cell data on its own when your WiFi dips.',
+    actions: [
+      { id: 'pair', label: 'Send test order', command: 'order(test tab)', result: 'Tab “TEST” opened and fired to the Kitchen' },
+      { id: 'signal', label: 'Signal check', command: 'get(signal)', result: 'WiFi -58 dBm · LTE backup present · roaming ready' },
+      { id: 'tip', label: 'Tip screen test', command: 'show(tip prompt)', result: 'Tip prompt shown · 18 / 20 / 25% + custom' },
+    ],
+    offline: 'Queues orders locally, then syncs the moment any link returns.',
+  },
+  {
+    id: 'kiosk',
+    name: 'Self-order kiosk',
+    icon: 'Store',
+    connection: 'Ethernet / WiFi',
+    tone: 'from-amber-400 to-yellow-500',
+    handles: ['vibe-self-order-kiosk'],
+    blurb: 'Runs the same menu as the counter, prints its own guest slip and upsells without anyone standing there.',
+    actions: [
+      { id: 'demo', label: 'Run attract loop', command: 'attract(start)', result: 'Attract screen playing your place-card photos' },
+      { id: 'order', label: 'Place test order', command: 'order(kiosk test)', result: 'Kiosk order #K-01 fired · upsell accepted in test' },
+      { id: 'lock', label: 'Lock to menu', command: 'kiosk(lock)', result: 'Device locked to ordering — no home screen, no browser' },
+    ],
+    offline: 'Keeps taking orders and prints slips while the line is down.',
+  },
+  {
+    id: 'lte-router',
+    name: 'LTE failover router',
+    icon: 'Router',
+    connection: 'Ethernet + cellular SIM',
+    tone: 'from-lime-500 to-emerald-500',
+    handles: ['lte-failover-router'],
+    blurb: 'Watches your broadband and swaps the whole shop to cell data in under three seconds. Your gear never even sees the gap.',
+    actions: [
+      { id: 'test', label: 'Test failover', command: 'failover(simulate)', result: 'Cut broadband · LTE carried the shop in 2.4s · 0 orders lost' },
+      { id: 'usage', label: 'Data used', command: 'get(usage)', result: '1.8 GB of 10 GB this cycle · POS traffic is tiny' },
+      { id: 'sim', label: 'SIM status', command: 'get(sim)', result: 'SIM active · 4 bars · carrier failover list has 2 backups' },
+    ],
+    offline: 'This is the thing that keeps you online when the building is not.',
+  },
+  {
+    id: 'label-printer',
+    name: 'Label / prep printer',
+    icon: 'Tag',
+    connection: 'USB / Bluetooth',
+    tone: 'from-slate-500 to-slate-700',
+    handles: ['receipt-paper-50-roll-case'],
+    blurb: 'Sticks the order name on the cup or the takeout bag so nothing goes out the door to the wrong hand.',
+    actions: [
+      { id: 'test', label: 'Print test label', command: 'label(test)', result: 'Label printed — name, item, modifiers, order #' },
+      { id: 'roll', label: 'Roll remaining', command: 'get(media)', result: 'About 340 labels left on this roll' },
+    ],
+    offline: 'Local print path — no internet required.',
+  },
+  {
+    id: 'scale',
+    name: 'Weight scale',
+    icon: 'Scale',
+    connection: 'USB',
+    tone: 'from-orange-500 to-red-500',
+    handles: [],
+    blurb: 'For anything sold by the pound — candy, coffee beans, hot bar. Price calculates itself into the ticket.',
+    actions: [
+      { id: 'read', label: 'Read weight', command: 'get(weight)', result: '0.84 lb · $10.08 at $12.00/lb added to the ticket' },
+      { id: 'zero', label: 'Tare / zero', command: 'tare()', result: 'Scale zeroed with the container on it' },
+    ],
+    offline: 'Reads over the cable, calculates on the terminal.',
+  },
+];
+
+// The always-on promise that sits above the device list.
+export const DEVICE_PROMISE = [
+  'Every device we sell ships already paired to your account — plug it in and it appears.',
+  'Test print, open the drawer and run a $0.00 card read from Settings before you ever open.',
+  'Drivers live on the terminal, so printers, drawers and readers fire with the internet unplugged.',
+  'Swap a broken printer at 6pm: pair the new one, drag it into the same station, keep serving.',
+];
+
+// ---------------- Connectivity failover ladder ----------------
+export interface FailoverStage {
+  id: string;
+  name: string;
+  status: string;
+  detail: string;
+  tone: string;
+  canTakePayments: boolean;
+  seconds: string;
+}
+
+export const FAILOVER_STAGES: FailoverStage[] = [
+  {
+    id: 'wifi',
+    name: 'Shop WiFi',
+    status: 'Primary',
+    detail: 'Everything syncs live — orders, tickets, online orders and reports.',
+    tone: 'from-emerald-500 to-teal-400',
+    canTakePayments: true,
+    seconds: 'Normal',
+  },
+  {
+    id: 'lte',
+    name: 'LTE router failover',
+    status: 'Automatic',
+    detail: 'Broadband drops and the LTE router carries the whole shop. Nobody on the floor notices.',
+    tone: 'from-sky-500 to-cyan-400',
+    canTakePayments: true,
+    seconds: 'Under 3 seconds',
+  },
+  {
+    id: 'phone',
+    name: 'Phone hotspot takeover',
+    status: 'One tap',
+    detail: 'No router in the truck? Tether the terminal to a staff phone and keep the same tickets and tabs.',
+    tone: 'from-violet-500 to-indigo-500',
+    canTakePayments: true,
+    seconds: 'About 10 seconds',
+  },
+  {
+    id: 'phone-pos',
+    name: 'Phone becomes the register',
+    status: 'Pivot',
+    detail: 'Terminal dead or truck moved? Open Love Local Eats on any phone, sign in, and the same menu, tabs and drawer are right there.',
+    tone: 'from-fuchsia-500 to-pink-500',
+    canTakePayments: true,
+    seconds: 'About 30 seconds',
+  },
+  {
+    id: 'offline',
+    name: 'Full offline mode',
+    status: 'Last resort',
+    detail: 'No WiFi, no cell, nothing. Orders, prints and card reads all queue on the device and settle automatically later.',
+    tone: 'from-amber-500 to-orange-600',
+    canTakePayments: true,
+    seconds: 'Instant',
+  },
+];
+
+// What a phone can still do with zero bars (the food-truck answer).
+export const PHONE_PIVOT_ABILITIES = [
+  { id: 'ring', label: 'Ring up the full menu', detail: 'Same items, modifiers and prices as the counter.' },
+  { id: 'tap', label: 'Take tap payments', detail: 'Phone tap-to-pay or a Bluetooth reader still authorises offline.' },
+  { id: 'swipe', label: 'Swipe with the plug-in reader', detail: 'USB-C swiper needs no radio and no battery.' },
+  { id: 'scan', label: 'Scan the card with the camera', detail: 'On-device recognition, masked and encrypted immediately.' },
+  { id: 'print', label: 'Print to the Bluetooth printer', detail: 'Guest slips keep printing off the phone.' },
+  { id: 'text', label: 'Text the receipt instead', detail: 'No paper? Send it by SMS when data returns.' },
+  { id: 'sync', label: 'Sync everything back', detail: 'Every queued order lands in reports with its real timestamp.' },
+  { id: 'tabs', label: 'Keep tabs open', detail: 'Tabs move with the account, not the machine.' },
+];

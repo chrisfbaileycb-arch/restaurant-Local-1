@@ -4,6 +4,8 @@ import {
   Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload,
 } from 'lucide-react';
 import PageShell from '@/components/site/PageShell';
+import DeviceBar from '@/components/site/DeviceBar';
+
 import type { MenuItem } from '@/data/menu';
 import { formatCents } from '@/data/platform';
 import { useAuth } from '@/contexts/AuthContext';
@@ -299,10 +301,16 @@ const POS: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-10 rounded-2xl border border-stone-200 bg-white p-6">
+        {/* Hardware strip — the gear this station can actually drive */}
+        <div className="mt-6">
+          <DeviceBar />
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6">
           <h2 className="font-bold text-stone-900">Want this on your counter?</h2>
           <p className="mt-1 text-sm text-stone-600">
-            Every sale here would already be in your daily close, sales tax report and rewards ledger.
+            Every sale here would already be in your daily close, sales tax report and rewards ledger — and every
+            printer, drawer and reader above fires from this same screen.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link to="/onboarding" className="rounded-xl bg-stone-900 px-5 py-3 font-semibold text-white">Upload my menu</Link>
@@ -310,6 +318,7 @@ const POS: React.FC = () => {
             <Link to="/collections/pos-terminals" className="rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">Shop terminals</Link>
           </div>
         </div>
+
       </div>
     </PageShell>
   );

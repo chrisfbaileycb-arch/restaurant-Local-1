@@ -10,11 +10,13 @@ import { useAuth } from '@/contexts/AuthContext';
 const PLATFORM_LINKS = [
   { to: '/onboarding', label: 'Build my store' },
   { to: '/pos', label: 'POS demo' },
+  { to: '/#devices', label: 'Devices' },
+  { to: '/#failover', label: 'Stay open offline' },
   { to: '/#website', label: 'Website hosting' },
   { to: '/#pricing', label: 'Pricing' },
-  { to: '/starter', label: 'Start cheap' },
   { to: '/shop', label: 'Hardware shop' },
 ];
+
 
 
 const Header: React.FC = () => {
