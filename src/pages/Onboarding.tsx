@@ -1,0 +1,503 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  Upload, FileText, Check, Loader2, Monitor, Globe, ShoppingBag, Gift, ArrowRight, ArrowLeft, Sparkles,
+  AlertTriangle, Database,
+} from 'lucide-react';
+import PageShell from '@/components/site/PageShell';
+import SignupForm from '@/components/site/SignupForm';
+import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents } from '@/data/platform';
+import { useAuth } from '@/contexts/AuthContext';
+import { parseMenuFile, parseMenuText, saveParsedMenu, loadShopMenu } from '@/lib/menuStore';
+import type { ParsedMenu } from '@/lib/menuStore';
+
+const SAMPLE_MENU_TEXT = `NORTH BEND COFFEE & KITCHEN
+BREAKFAST
+Breakfast Burrito 10.50 (add avocado +1.50, no cheese, extra salsa)
+Avocado Toast 9.25
+Yogurt Parfait 6.50
+LUNCH
+Smash Burger 11.95 (add bacon +2.00, sub side salad)
+Chicken Sandwich 12.75 (spicy, add pickles)
+Loaded Fries 7.95 (add queso +1.25)
+House Salad 8.50
+ESPRESSO
+Latte 12oz 4.75 / 16oz 5.45 (oat milk +0.75, extra shot +1.00)
+Cappuccino 4.95
+Cold Brew 5.25 (sweet cream +0.75)
+Drip Coffee 2.95
+SWEETS
+Warm Chocolate Chip Cookie 3.75 (box of 6 +16.00)
+Cinnamon Roll 4.95
+Brownie 3.95
+BEER & WINE
+Draft IPA 16oz 7.00
+Lager Can 6.00
+House Red 9.00
+Ranch Water 8.50`;
+
+const Onboarding: React.FC = () => {
+  const [params] = useSearchParams();
+  const { user } = useAuth();
+  const [step, setStep] = useState(1);
+  const [type, setType] = useState(params.get('type') || '');
+  const [shopName, setShopName] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState('');
+  const [menu, setMenu] = useState<ParsedMenu | null>(null);
+  const [reward, setReward] = useState('punch');
+  const [saving, setSaving] = useState(false);
+  const [savedShopId, setSavedShopId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    const t = params.get('type');
+    if (t) {
+      setType(t);
+      setStep(2);
+    }
+  }, [params]);
+
+  // Hydrate the previews from an already-saved menu when the owner comes back.
+  useEffect(() => {
+    let cancelled = false;
+    loadShopMenu(user?.id || null).then((loaded) => {
+      if (cancelled || loaded.isDemo) return;
+      setMenu((current) => {
+        if (current) return current;
+        const categories = loaded.categories.map((name) => ({
+          name,
+          items: loaded.items
+            .filter((i) => i.category === name)
+            .map((i) => ({ name: i.name, description: '', price: i.price, sizes: [], modifiers: i.mods || [] })),
+        }));
+        return { shop_name: loaded.shopName, business_type: null, categories, itemCount: loaded.items.length };
+      });
+      setShopName((n) => n || loaded.shopName);
+      setSavedShopId((id) => id || loaded.shopId);
+      setFileName((f) => f || 'saved menu');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const concept = useMemo(() => BUSINESS_TYPES.find((b) => b.id === type), [type]);
+  const allItems = useMemo(
+    () => (menu?.categories || []).flatMap((c) => c.items.map((i) => ({ ...i, category: c.name }))),
+    [menu]
+  );
+
+  const applyResult = (result: ParsedMenu) => {
+    setMenu(result);
+    if (!shopName && result.shop_name) setShopName(result.shop_name);
+    if (!type && result.business_type) setType(result.business_type);
+  };
+
+  const handleFile = async (file: File) => {
+    setFileName(file.name);
+    setParseError('');
+    setMenu(null);
+    setSavedShopId(null);
+    setParsing(true);
+    try {
+      applyResult(await parseMenuFile(file));
+    } catch (err: any) {
+      setParseError(err.message || 'We could not read that menu. Try a clearer photo or a CSV.');
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  const handleSample = async () => {
+    setFileName('sample-menu.txt');
+    setParseError('');
+    setMenu(null);
+    setSavedShopId(null);
+    setParsing(true);
+    try {
+      applyResult(await parseMenuText(SAMPLE_MENU_TEXT, 'sample-menu.txt'));
+    } catch (err: any) {
+      setParseError(err.message || 'Menu parsing failed.');
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!menu) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      const id = await saveParsedMenu({
+        ownerId: user?.id || null,
+        ownerEmail: user?.email || null,
+        shopName: shopName || menu.shop_name || 'My Shop',
+        businessType: type || menu.business_type || 'restaurant',
+        rewardProgram: reward,
+        fileName,
+        menu,
+      });
+      setSavedShopId(id);
+      setStep(4);
+    } catch (err: any) {
+      setSaveError(err.message || 'Could not save your menu. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <PageShell>
+      <div className="border-b border-stone-200 bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+          <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">
+            <Sparkles className="h-3.5 w-3.5" /> No-code launch wizard
+          </span>
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-stone-900">Build your whole store</h1>
+          <p className="mt-2 max-w-2xl text-stone-600">
+            Four steps. Your real menu becomes a POS layout, an ordering site, a one-page website and a rewards program.
+          </p>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-4">
+            {LAUNCH_STEPS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setStep(s.id)}
+                className={`rounded-xl border p-3 text-left transition ${
+                  step === s.id
+                    ? 'border-stone-900 bg-stone-900 text-white'
+                    : step > s.id
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                    : 'border-stone-200 bg-white text-stone-600 hover:border-stone-400'
+                }`}
+              >
+                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide">
+                  {step > s.id ? <Check className="h-3.5 w-3.5" /> : <span>Step {s.id}</span>}
+                </span>
+                <span className="mt-1 block text-sm font-semibold">{s.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+        {/* STEP 1 */}
+        {step === 1 && (
+          <section>
+            <h2 className="text-2xl font-extrabold text-stone-900">What are you opening?</h2>
+            <p className="mt-2 text-stone-600">This sets your POS layout, modifiers and website copy.</p>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {BUSINESS_TYPES.map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => setType(b.id)}
+                  className={`rounded-2xl border p-5 text-left transition ${
+                    type === b.id ? 'border-stone-900 bg-white shadow-lg' : 'border-stone-200 bg-white hover:border-stone-400'
+                  }`}
+                >
+                  <div className={`mb-3 h-1.5 w-12 rounded-full bg-gradient-to-r ${b.accent}`} />
+                  <p className="font-bold text-stone-900">{b.label}</p>
+                  <p className="mt-1 text-sm text-stone-500">{b.blurb}</p>
+                  {type === b.id && (
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                      <Check className="h-3.5 w-3.5" /> Selected
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="mt-6 max-w-md">
+              <label className="mb-1 block text-sm font-semibold text-stone-800">Shop name</label>
+              <input
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+                placeholder="e.g. North Bend Coffee"
+                className="w-full rounded-xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+              />
+            </div>
+            <button
+              onClick={() => setStep(2)}
+              disabled={!type}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3.5 font-bold text-white disabled:opacity-50"
+            >
+              Continue <ArrowRight className="h-4 w-4" />
+            </button>
+          </section>
+        )}
+
+        {/* STEP 2 */}
+        {step === 2 && (
+          <section>
+            <h2 className="text-2xl font-extrabold text-stone-900">Upload your menu</h2>
+            <p className="mt-2 text-stone-600">
+              A photo of your board, a PDF, a spreadsheet — anything. Our AI reads items, prices, sizes and modifiers.
+            </p>
+
+            <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-white p-12 text-center transition hover:border-amber-500 hover:bg-amber-50/40">
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*,.pdf,.csv,.txt"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                }}
+              />
+              <Upload className="h-10 w-10 text-stone-400" />
+              <p className="mt-3 font-semibold text-stone-900">Drop your menu here or click to browse</p>
+              <p className="mt-1 text-sm text-stone-500">JPG, PNG, PDF, CSV or TXT · photos work best</p>
+            </label>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleSample}
+                disabled={parsing}
+                className="rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-50"
+              >
+                Use a sample menu instead
+              </button>
+              {fileName && (
+                <span className="inline-flex items-center gap-2 text-sm text-stone-600">
+                  <FileText className="h-4 w-4" /> {fileName}
+                </span>
+              )}
+            </div>
+
+            {parsing && (
+              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-stone-200 bg-white p-6">
+                <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+                <div>
+                  <p className="font-semibold text-stone-900">Reading your menu…</p>
+                  <p className="text-sm text-stone-500">Detecting categories, prices, sizes and modifiers.</p>
+                </div>
+              </div>
+            )}
+
+            {parseError && (
+              <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-semibold">We couldn&apos;t read that file</p>
+                  <p className="text-sm">{parseError}</p>
+                </div>
+              </div>
+            )}
+
+            {menu && (
+              <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+                <p className="flex items-center gap-2 font-bold text-emerald-900">
+                  <Check className="h-5 w-5" /> Found {menu.itemCount} items across {menu.categories.length} categories
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {menu.categories.map((c) => (
+                    <span key={c.name} className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-emerald-800">
+                      {c.name} · {c.items.length}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-4 max-h-56 overflow-y-auto rounded-xl bg-white p-3">
+                  {allItems.slice(0, 40).map((i, idx) => (
+                    <div key={`${i.name}-${idx}`} className="flex items-center justify-between border-b border-stone-100 py-1.5 text-sm last:border-0">
+                      <span className="font-medium text-stone-800">
+                        {i.name}
+                        {i.modifiers && i.modifiers.length > 0 && (
+                          <span className="ml-2 text-xs text-stone-400">{i.modifiers.length} modifiers</span>
+                        )}
+                      </span>
+                      <span className="text-stone-600">{formatCents(i.price)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setStep(1)} className="inline-flex items-center gap-2 rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!menu}
+                className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3 font-bold text-white disabled:opacity-50"
+              >
+                Review my build <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* STEP 3 */}
+        {step === 3 && menu && (
+          <section>
+            <h2 className="text-2xl font-extrabold text-stone-900">Here&apos;s what we built</h2>
+            <p className="mt-2 text-stone-600">
+              Everything below came from <strong>{fileName || 'your upload'}</strong>. Save it and every screen — POS,
+              ordering, website — uses this menu.
+            </p>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              {/* POS preview */}
+              <div className="rounded-2xl border border-stone-200 bg-white p-5">
+                <p className="flex items-center gap-2 text-sm font-bold text-stone-900"><Monitor className="h-4 w-4 text-amber-600" /> POS layout</p>
+                <div className="mt-4 grid grid-cols-3 gap-1.5">
+                  {allItems.slice(0, 12).map((m, i) => (
+                    <div key={`${m.name}-${i}`} className="rounded-lg bg-stone-900 p-2">
+                      <p className="line-clamp-2 text-[9px] font-semibold leading-tight text-white">{m.name}</p>
+                      <p className="text-[9px] text-amber-400">{formatCents(m.price)}</p>
+                    </div>
+                  ))}
+                </div>
+                <Link to="/pos" className="mt-4 block rounded-lg bg-stone-100 py-2 text-center text-sm font-semibold text-stone-800 hover:bg-stone-200">
+                  Open live POS
+                </Link>
+              </div>
+
+              {/* Ordering preview */}
+              <div className="rounded-2xl border border-stone-200 bg-white p-5">
+                <p className="flex items-center gap-2 text-sm font-bold text-stone-900"><ShoppingBag className="h-4 w-4 text-amber-600" /> Online ordering</p>
+                <div className="mt-4 space-y-2">
+                  {allItems.slice(0, 5).map((m, i) => (
+                    <div key={`${m.name}-ord-${i}`} className="flex items-center justify-between rounded-lg border border-stone-200 p-2 text-xs">
+                      <span className="font-semibold text-stone-800">{m.name}</span>
+                      <span className="text-stone-500">{formatCents(m.price)}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-emerald-700">0% commission · Apple Pay · pickup windows</p>
+              </div>
+
+              {/* Website preview */}
+              <div className="rounded-2xl border border-stone-200 bg-white p-5">
+                <p className="flex items-center gap-2 text-sm font-bold text-stone-900"><Globe className="h-4 w-4 text-amber-600" /> One-page website</p>
+                <div className="mt-4 overflow-hidden rounded-lg border border-stone-200">
+                  <div className="bg-stone-900 p-3">
+                    <p className="text-sm font-extrabold text-white">{shopName || menu.shop_name || 'Your Shop'}</p>
+                    <p className="text-[10px] text-amber-400">{concept?.label || 'Local favorite'} · Open today 7a–7p</p>
+                  </div>
+                  <div className="space-y-1.5 p-3">
+                    {menu.categories.slice(0, 4).map((c) => (
+                      <p key={c.name} className="text-[10px] font-semibold text-stone-600">
+                        {c.name} · {c.items.length} items
+                      </p>
+                    ))}
+                    <div className="mt-2 h-6 w-24 rounded bg-amber-500" />
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-stone-500">Custom domain + SSL included</p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6">
+              <p className="flex items-center gap-2 font-bold text-stone-900"><Gift className="h-4 w-4 text-amber-600" /> Pick your rewards program</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {REWARD_PROGRAMS.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => setReward(r.id)}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      reward === r.id ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-400'
+                    }`}
+                  >
+                    <p className="font-bold text-stone-900">{r.name}</p>
+                    <p className="mt-1 text-xs text-stone-600">{r.rule}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {!user && (
+              <p className="mt-4 text-sm text-stone-500">
+                Not signed in — we&apos;ll save this build to this browser.{' '}
+                <Link to="/login" className="font-semibold text-amber-700 underline">Create an account</Link> to attach it to your shop.
+              </p>
+            )}
+            {saveError && <p className="mt-3 text-sm text-red-600">{saveError}</p>}
+
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setStep(2)} className="inline-flex items-center gap-2 rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3 font-bold text-white disabled:opacity-60"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                {saving ? 'Saving your menu…' : 'Save menu & go live'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {step === 3 && !menu && (
+          <div className="rounded-2xl border border-stone-200 bg-white p-8 text-center">
+            <p className="font-semibold text-stone-900">Upload a menu first</p>
+            <button onClick={() => setStep(2)} className="mt-4 rounded-xl bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white">
+              Go to upload
+            </button>
+          </div>
+        )}
+
+        {/* STEP 4 */}
+        {step === 4 && (
+          <section className="grid gap-8 lg:grid-cols-2">
+            <div>
+              <h2 className="text-2xl font-extrabold text-stone-900">You&apos;re live</h2>
+              {savedShopId ? (
+                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                  <p className="font-bold">Menu saved to your store</p>
+                  <p className="mt-1">
+                    {menu?.itemCount || 0} items across {menu?.categories.length || 0} categories are now powering your
+                    POS and ordering pages.
+                  </p>
+                  <Link to="/pos" className="mt-2 inline-flex items-center gap-1 font-bold underline">
+                    Ring a test order <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              ) : (
+                <p className="mt-2 text-stone-600">Tell us where to send your build link and we publish everything.</p>
+              )}
+              <ul className="mt-6 space-y-2 text-sm text-stone-700">
+                {[
+                  'POS layout published to every station and phone',
+                  'Ordering site live on your domain within 48 hours',
+                  `${REWARD_PROGRAMS.find((r) => r.id === reward)?.name} rewards switched on`,
+                  'Reports, sales tax and payroll exports enabled',
+                  'Free processing rate audit scheduled',
+                ].map((t) => (
+                  <li key={t} className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {t}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-5">
+                <p className="font-bold text-stone-900">Need the hardware too?</p>
+                <p className="mt-1 text-sm text-stone-600">
+                  We recommend the {concept?.label || 'counter service'} kit for your concept.
+                </p>
+                <Link to="/shop" className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-amber-700 hover:text-amber-800">
+                  See recommended gear <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+            <div className="h-fit rounded-3xl bg-stone-900 p-6">
+              <SignupForm
+                source="waitlist"
+                tags={['launch-request', type || 'restaurant']}
+                cta="Publish my store"
+                dark
+                heading="Send me my build link"
+                sub="No card required to publish your ordering site."
+              />
+            </div>
+          </section>
+        )}
+      </div>
+    </PageShell>
+  );
+};
+
+export default Onboarding;

@@ -1,0 +1,211 @@
+import { supabase } from '@/lib/supabase';
+import { DEMO_MENU, MENU_CATEGORIES } from '@/data/menu';
+import type { MenuItem } from '@/data/menu';
+
+export const ACTIVE_SHOP_KEY = 'vibe_active_shop_id';
+
+export interface ParsedItem {
+  name: string;
+  description?: string;
+  price: number; // cents
+  sizes?: { name: string; price: number }[];
+  modifiers?: string[];
+}
+
+export interface ParsedCategory {
+  name: string;
+  items: ParsedItem[];
+}
+
+export interface ParsedMenu {
+  shop_name?: string | null;
+  business_type?: string | null;
+  categories: ParsedCategory[];
+  itemCount: number;
+}
+
+export interface LoadedMenu {
+  shopId: string | null;
+  shopName: string;
+  isDemo: boolean;
+  categories: string[];
+  items: MenuItem[];
+}
+
+export const DEMO_LOADED_MENU: LoadedMenu = {
+  shopId: null,
+  shopName: 'Demo Shop',
+  isDemo: true,
+  categories: MENU_CATEGORIES,
+  items: DEMO_MENU,
+};
+
+/** Convert a File into the payload the parse-menu edge function expects. */
+export const fileToParsePayload = (
+  file: File
+): Promise<{ imageDataUrl?: string; text?: string; fileName: string }> =>
+  new Promise((resolve, reject) => {
+    const isText = /\.(csv|txt|tsv)$/i.test(file.name) || file.type.startsWith('text/');
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file'));
+    reader.onload = () => {
+      const result = reader.result as string;
+      if (isText) resolve({ text: result, fileName: file.name });
+      else resolve({ imageDataUrl: result, fileName: file.name });
+    };
+    if (isText) reader.readAsText(file);
+    else reader.readAsDataURL(file);
+  });
+
+/** Send an upload to the AI parser and return structured menu JSON. */
+export const parseMenuFile = async (file: File): Promise<ParsedMenu & { error?: string | null }> => {
+  const payload = await fileToParsePayload(file);
+  const { data, error } = await supabase.functions.invoke('parse-menu', { body: payload });
+  if (error) throw new Error(error.message || 'Menu parsing failed');
+  if (!data?.success) throw new Error(data?.error || 'No menu items were detected in that file.');
+  return data as ParsedMenu;
+};
+
+/** Parse plain text (used for the "sample menu" shortcut and pasted menus). */
+export const parseMenuText = async (text: string, fileName = 'menu.txt') => {
+  const { data, error } = await supabase.functions.invoke('parse-menu', { body: { text, fileName } });
+  if (error) throw new Error(error.message || 'Menu parsing failed');
+  if (!data?.success) throw new Error(data?.error || 'No menu items were detected.');
+  return data as ParsedMenu;
+};
+
+interface SaveArgs {
+  ownerId?: string | null;
+  ownerEmail?: string | null;
+  shopName: string;
+  businessType: string;
+  rewardProgram?: string;
+  fileName?: string;
+  menu: ParsedMenu;
+}
+
+/** Create (or refresh) a shop and replace its saved menu with the parsed result. */
+export const saveParsedMenu = async ({
+  ownerId,
+  ownerEmail,
+  shopName,
+  businessType,
+  rewardProgram = 'punch',
+  fileName,
+  menu,
+}: SaveArgs): Promise<string> => {
+  let shopId: string | null = null;
+
+  if (ownerId) {
+    const { data } = await supabase.from('shops').select('id').eq('owner_id', ownerId).limit(1);
+    shopId = data?.[0]?.id ?? null;
+  }
+  if (!shopId) {
+    const stored = localStorage.getItem(ACTIVE_SHOP_KEY);
+    if (stored) {
+      const { data } = await supabase.from('shops').select('id').eq('id', stored).limit(1);
+      shopId = data?.[0]?.id ?? null;
+    }
+  }
+
+  const shopPayload = {
+    owner_id: ownerId || null,
+    owner_email: ownerEmail || null,
+    name: shopName || 'My Shop',
+    business_type: businessType || 'restaurant',
+    reward_program: rewardProgram,
+    source_file_name: fileName || null,
+    is_published: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (shopId) {
+    await supabase.from('shops').update(shopPayload).eq('id', shopId);
+    await supabase.from('menu_items').delete().eq('shop_id', shopId);
+    await supabase.from('menu_categories').delete().eq('shop_id', shopId);
+  } else {
+    const { data, error } = await supabase.from('shops').insert(shopPayload).select('id').single();
+    if (error || !data) throw new Error(error?.message || 'Could not create your shop');
+    shopId = data.id;
+  }
+
+  const catRows = menu.categories.map((c, i) => ({ shop_id: shopId, name: c.name, position: i }));
+  const { data: savedCats } = await supabase.from('menu_categories').insert(catRows).select('id, name, position');
+
+  const itemRows: any[] = [];
+  menu.categories.forEach((c, ci) => {
+    const match = savedCats?.find((s: any) => s.name === c.name && s.position === ci);
+    c.items.forEach((it, ii) => {
+      itemRows.push({
+        shop_id: shopId,
+        category_id: match?.id || null,
+        name: it.name,
+        description: it.description || null,
+        price: it.price || 0,
+        sizes: it.sizes || [],
+        modifiers: it.modifiers || [],
+        position: ii,
+      });
+    });
+  });
+  if (itemRows.length) await supabase.from('menu_items').insert(itemRows);
+
+  localStorage.setItem(ACTIVE_SHOP_KEY, shopId as string);
+  return shopId as string;
+};
+
+/** Load the signed-in owner's menu (or the last shop built on this device). */
+export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu> => {
+  let shop: any = null;
+
+  if (ownerId) {
+    const { data } = await supabase
+      .from('shops')
+      .select('*')
+      .eq('owner_id', ownerId)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    shop = data?.[0] || null;
+  }
+  if (!shop) {
+    const stored = localStorage.getItem(ACTIVE_SHOP_KEY);
+    if (stored) {
+      const { data } = await supabase.from('shops').select('*').eq('id', stored).limit(1);
+      shop = data?.[0] || null;
+    }
+  }
+  if (!shop) return DEMO_LOADED_MENU;
+
+  const { data: cats } = await supabase
+    .from('menu_categories')
+    .select('id, name, position')
+    .eq('shop_id', shop.id)
+    .order('position');
+  const { data: rows } = await supabase
+    .from('menu_items')
+    .select('id, name, price, category_id, modifiers, description')
+    .eq('shop_id', shop.id)
+    .order('position');
+
+  if (!rows || rows.length === 0) return DEMO_LOADED_MENU;
+
+  const catName = (id: string | null) => cats?.find((c: any) => c.id === id)?.name || 'Menu';
+  const items: MenuItem[] = rows.map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    price: r.price,
+    category: catName(r.category_id),
+    mods: Array.isArray(r.modifiers) ? r.modifiers : [],
+  }));
+
+  const ordered = (cats || []).map((c: any) => c.name).filter((n: string) => items.some((i) => i.category === n));
+  const extras = Array.from(new Set(items.map((i) => i.category))).filter((n) => !ordered.includes(n));
+
+  return {
+    shopId: shop.id,
+    shopName: shop.name,
+    isDemo: false,
+    categories: [...ordered, ...extras],
+    items,
+  };
+};

@@ -1,0 +1,104 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Flame, Phone, Mail } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { BRAND, BUSINESS_TYPES, REPORTS } from '@/data/platform';
+import SignupForm from '@/components/site/SignupForm';
+
+const Footer: React.FC = () => {
+  const [collections, setCollections] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('ecom_collections')
+      .select('id, title, handle')
+      .eq('is_visible', true)
+      .order('title')
+      .then(({ data }) => setCollections(data || []));
+  }, []);
+
+  return (
+    <footer className="bg-stone-900 text-stone-300">
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
+        <div className="grid gap-10 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-2 text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-stone-900">
+                <Flame className="h-5 w-5" />
+              </span>
+              <span className="text-lg font-extrabold">{BRAND.name}</span>
+            </div>
+            <p className="mt-4 max-w-sm text-sm text-stone-400">{BRAND.subtitle}</p>
+            <div className="mt-6 max-w-md">
+              <SignupForm
+                source="footer-signup"
+                tags={['newsletter', 'footer-signup']}
+                cta="Send me the launch kit"
+                dark
+                compact
+                showName={false}
+                heading="Get the free launch kit"
+                sub="Menu templates, rate benchmarks and a launch checklist."
+              />
+            </div>
+            <div className="mt-6 flex flex-col gap-1 text-sm text-stone-400">
+              <span className="inline-flex items-center gap-2">
+                <Phone className="h-4 w-4" /> {BRAND.supportPhone}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Mail className="h-4 w-4" /> {BRAND.supportEmail}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Platform</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link className="hover:text-amber-400" to="/onboarding">Menu-to-store builder</Link></li>
+              <li><Link className="hover:text-amber-400" to="/pos">Touchscreen POS</Link></li>
+              <li><Link className="hover:text-amber-400" to="/dashboard">Reporting suite</Link></li>
+              <li><Link className="hover:text-amber-400" to="/dashboard">Employee scheduling</Link></li>
+              <li><Link className="hover:text-amber-400" to="/dashboard">Rewards programs</Link></li>
+              <li><Link className="hover:text-amber-400" to="/dashboard">Rate shopper</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Shop</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link className="hover:text-amber-400" to="/shop">All hardware</Link></li>
+              {collections.map((c) => (
+                <li key={c.id}>
+                  <Link className="hover:text-amber-400" to={`/collections/${c.handle}`}>
+                    {c.title}
+                  </Link>
+                </li>
+              ))}
+              <li><Link className="hover:text-amber-400" to="/cart">Cart</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Built for</h4>
+            <ul className="space-y-2 text-sm">
+              {BUSINESS_TYPES.map((b) => (
+                <li key={b.id}>
+                  <Link className="hover:text-amber-400" to={`/onboarding?type=${b.id}`}>
+                    {b.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-stone-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} {BRAND.name}. Built for independent food businesses.</p>
+          <p>{REPORTS.length} standard reports · PCI P2PE validated · No long-term contracts</p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;
