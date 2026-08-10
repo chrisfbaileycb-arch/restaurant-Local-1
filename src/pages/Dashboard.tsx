@@ -2,18 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Gift, CreditCard, Download, TrendingUp, Users, Percent, Receipt, Package,
+  Activity, ShieldCheck, ShieldAlert, Plug, Clock,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/site/PageShell';
+import StationMonitor from '@/components/site/StationMonitor';
+import { useDeviceHealth, sinceLabel } from '@/hooks/useDeviceHealth';
 import {
   SALES_TREND, CATEGORY_MIX, TAX_JURISDICTIONS, SHIFTS, WEEK_DAYS, REPORTS, REWARD_PROGRAMS,
   PROCESSORS, calcProcessingCost, formatMoney, formatCents,
 } from '@/data/platform';
 
 const TABS = [
+  { id: 'stations', label: 'Stations & hardware', icon: Plug },
   { id: 'sales', label: 'Sales & reports', icon: BarChart3 },
   { id: 'tax', label: 'Sales tax', icon: Receipt },
   { id: 'team', label: 'Schedule & labor', icon: CalendarDays },
@@ -25,10 +29,12 @@ const TABS = [
 const PIE_COLORS = ['#f59e0b', '#0ea5e9', '#10b981', '#f43f5e', '#8b5cf6'];
 
 const Dashboard: React.FC = () => {
-  const [tab, setTab] = useState('sales');
+  const [tab, setTab] = useState('stations');
   const [orders, setOrders] = useState<any[]>([]);
   const [volume, setVolume] = useState(45000);
   const [ticket, setTicket] = useState(14);
+  const { devices, downCount, connectedCount, ordersBlocked, lastSweep } = useDeviceHealth();
+
 
   useEffect(() => {
     supabase
@@ -78,8 +84,23 @@ const Dashboard: React.FC = () => {
     <PageShell>
       <div className="border-b border-stone-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">Owner dashboard</h1>
-          <p className="mt-2 text-stone-600">Sample data from a single-location coffee &amp; sandwich shop.</p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">Owner dashboard</h1>
+              <p className="mt-2 text-stone-600">Sample data from a single-location coffee &amp; sandwich shop.</p>
+            </div>
+            <button
+              onClick={() => setTab('stations')}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                ordersBlocked
+                  ? 'animate-pulse bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
+              }`}
+            >
+              {ordersBlocked ? <ShieldAlert className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+              {ordersBlocked ? 'Equipment alert · order entry held' : `All ${connectedCount} stations connected`}
+            </button>
+          </div>
           <div className="mt-6 flex flex-wrap gap-2">
             {TABS.map((t) => {
               const Icon = t.icon;
@@ -92,6 +113,11 @@ const Dashboard: React.FC = () => {
                   }`}
                 >
                   <Icon className="h-4 w-4" /> {t.label}
+                  {t.id === 'stations' && downCount > 0 && (
+                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                      {downCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -100,7 +126,20 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {tab === 'stations' && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {kpi('Devices paired', String(devices.length), 'Across this location', Plug)}
+              {kpi('Connected now', `${connectedCount}/${devices.length}`, downCount ? `${downCount} not answering` : 'Everything answering', Activity)}
+              {kpi('Order entry', ordersBlocked ? 'Held' : 'Open', ordersBlocked ? 'Critical device offline' : 'No blocking faults', ordersBlocked ? ShieldAlert : ShieldCheck)}
+              {kpi('Last verified', sinceLabel(lastSweep), 'Automatic heartbeat', Clock)}
+            </div>
+            <StationMonitor />
+          </div>
+        )}
+
         {tab === 'sales' && (
+
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {kpi('Week sales', formatMoney(weekSales), '+12.4% vs last week', TrendingUp)}

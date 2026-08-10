@@ -854,3 +854,79 @@ export const PHONE_PIVOT_ABILITIES = [
   { id: 'sync', label: 'Sync everything back', detail: 'Every queued order lands in reports with its real timestamp.' },
   { id: 'tabs', label: 'Keep tabs open', detail: 'Tabs move with the account, not the machine.' },
 ];
+
+// ============================================================
+// Equipment health monitoring
+// The owner dashboard re-verifies every paired device all day.
+// If something critical stops answering, order entry is held.
+// ============================================================
+
+export type DeviceSeverity = 'blocking' | 'warn' | 'info';
+
+/** How badly each device going dark hurts service. Single source of truth. */
+export const DEVICE_SEVERITY: Record<DeviceKindId, DeviceSeverity> = {
+  'kitchen-printer': 'blocking',
+  kds: 'blocking',
+  'card-reader': 'blocking',
+  'receipt-printer': 'warn',
+  'cash-drawer': 'warn',
+  handheld: 'warn',
+  kiosk: 'warn',
+  'lte-router': 'warn',
+  'phone-swiper': 'info',
+  'card-scan': 'info',
+  'label-printer': 'info',
+  scale: 'info',
+};
+
+export const SEVERITY_COPY: Record<
+  DeviceSeverity,
+  { label: string; short: string; chip: string; explain: string }
+> = {
+  blocking: {
+    label: 'Holds order entry',
+    short: 'Critical',
+    chip: 'bg-red-100 text-red-800 border-red-200',
+    explain: 'Food gets rung with nowhere to cook it, so the register stops taking new orders until this is back.',
+  },
+  warn: {
+    label: 'Warn only',
+    short: 'Important',
+    chip: 'bg-amber-100 text-amber-900 border-amber-200',
+    explain: 'You keep serving. We flag it so it gets fixed before it becomes a problem at the rush.',
+  },
+  info: {
+    label: 'Good to know',
+    short: 'Backup',
+    chip: 'bg-stone-100 text-stone-700 border-stone-200',
+    explain: 'A backup path. Nothing on the floor changes while it is offline.',
+  },
+};
+
+/** Heartbeat settings — verified periodically from open to close. */
+export const HEALTH_CHECK = {
+  intervalMs: 45000,
+  intervalLabel: 'every 45 seconds',
+  staggerMs: 260,
+  missesBeforeDown: 1,
+  windowLabel: 'Open to close, all day',
+  windowHours: '6:00am – 11:00pm, then hourly overnight',
+};
+
+export const HEALTH_RULES = [
+  `Every paired device is pinged ${HEALTH_CHECK.intervalLabel} from open to close — you never have to remember to check.`,
+  'A device that misses its answer is marked Not connected within one heartbeat and an alert opens instantly.',
+  'If the kitchen printer, kitchen display or card reader is dark, the register refuses new orders so the line never falls behind.',
+  'Tickets already fired, open tabs and taking payment on an existing ticket are never blocked.',
+  'The alert clears itself the moment the device answers again — no one has to remember to un-pause anything.',
+];
+
+export const BLOCK_REASONS: Partial<Record<DeviceKindId, string>> = {
+  'kitchen-printer': 'Tickets would be rung with nothing printing on the line.',
+  kds: 'The kitchen screen is dark, so the line would never see the order.',
+  'card-reader': 'Cards cannot be authorised, so the ticket could not be closed out.',
+};
+
+export const CRITICAL_DEVICES = (Object.keys(DEVICE_SEVERITY) as DeviceKindId[]).filter(
+  (id) => DEVICE_SEVERITY[id] === 'blocking',
+);

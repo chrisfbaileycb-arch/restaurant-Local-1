@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Printer, ChefHat, Wallet, CreditCard, Smartphone, ScanLine, Monitor, Tablet,
-  Store, Router, Tag, Scale, Check, Plug, Loader2, Terminal, ArrowRight, ShieldCheck, Zap,
+  Store, Router, Tag, Scale, Check, Plug, Loader2, Terminal, ArrowRight, ShieldCheck, Zap, Activity,
 } from 'lucide-react';
 
 import Reveal from '@/components/site/Reveal';
 import { Pointer } from '@/components/site/Pointer';
 import { useDevices } from '@/hooks/useDevices';
 import { supabase } from '@/lib/supabase';
-import { DEVICE_KINDS, DEVICE_PROMISE, formatCents, type DeviceKindId } from '@/data/platform';
+import {
+  DEVICE_KINDS, DEVICE_PROMISE, HEALTH_CHECK, HEALTH_RULES, formatCents, type DeviceKindId,
+} from '@/data/platform';
+
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Printer, ChefHat, Wallet, CreditCard, Smartphone, ScanLine, Monitor, Tablet, Store, Router, Tag, Scale,
@@ -227,6 +230,42 @@ const DeviceHub: React.FC = () => {
             </Reveal>
           ))}
         </div>
+
+        {/* All-day connection monitoring */}
+        <Reveal>
+          <div className="mt-8 rounded-2xl border border-white/10 bg-gradient-to-br from-red-500/10 to-amber-500/10 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white/70">
+                  <Activity className="h-3.5 w-3.5" /> Watched all day, not assumed
+                </span>
+                <h3 className="mt-3 text-xl font-extrabold text-white">
+                  Every station is re-verified {HEALTH_CHECK.intervalLabel} — and the register stops if the kitchen goes dark
+                </h3>
+                <p className="mt-2 text-sm text-white/70">
+                  Your owner dashboard pings each paired device from open to close. If the kitchen printer, kitchen
+                  display or card reader stops answering, an alert opens instantly and order entry is held at the
+                  register, so nobody rings food the line will never see. It unlocks itself the second the device
+                  reconnects.
+                </p>
+              </div>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-extrabold text-slate-900 transition hover:scale-[1.03]"
+              >
+                See the station monitor <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+              {HEALTH_RULES.map((r) => (
+                <li key={r} className="flex items-start gap-2 rounded-xl bg-white/5 p-3 text-sm text-white/75">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+
 
         <div className="mt-8">
           <Link
