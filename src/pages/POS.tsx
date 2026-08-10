@@ -8,7 +8,7 @@ import DeviceBar from '@/components/site/DeviceBar';
 import HealthBanner from '@/components/site/HealthBanner';
 
 import type { MenuItem } from '@/data/menu';
-import { formatCents } from '@/data/platform';
+import { formatCents, formatTaxRate } from '@/data/platform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
@@ -20,7 +20,7 @@ interface Line extends MenuItem {
   lineId: string;
 }
 
-const TAX_RATE = 0.0825;
+
 
 const POS: React.FC = () => {
   const { user } = useAuth();
@@ -58,10 +58,13 @@ const POS: React.FC = () => {
     [loaded, category]
   );
 
+  // Tax comes from shop settings (shops.tax_rate), not a hardcoded rate.
+  const taxRate = loaded.taxRate;
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const tax = Math.round(subtotal * TAX_RATE);
+  const tax = Math.round(subtotal * taxRate);
   const tip = Math.round(subtotal * (tipPct / 100));
   const total = subtotal + tax + tip;
+
 
   const add = (m: MenuItem) => {
     // Hard stop: a critical station is dark, so nothing new gets rung.
@@ -301,7 +304,16 @@ const POS: React.FC = () => {
 
             <div className="mt-4 space-y-1.5 border-t border-stone-200 pt-4 text-sm">
               <div className="flex justify-between text-stone-600"><span>Subtotal</span><span>{formatCents(subtotal)}</span></div>
-              <div className="flex justify-between text-stone-600"><span>Tax (8.25%)</span><span>{formatCents(tax)}</span></div>
+              <div className="flex justify-between text-stone-600">
+                <span>
+                  Tax ({formatTaxRate(taxRate)})
+                  <Link to="/dashboard" className="ml-1.5 text-[11px] font-semibold text-amber-700 hover:text-amber-800">
+                    edit
+                  </Link>
+                </span>
+                <span>{formatCents(tax)}</span>
+              </div>
+
               <div className="flex justify-between text-stone-600"><span>Tip</span><span>{formatCents(tip)}</span></div>
               <div className="flex justify-between pt-1 text-lg font-extrabold text-stone-900"><span>Total</span><span>{formatCents(total)}</span></div>
             </div>

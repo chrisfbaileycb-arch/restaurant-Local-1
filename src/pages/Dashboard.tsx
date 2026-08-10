@@ -10,7 +10,9 @@ import {
 import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/site/PageShell';
 import StationMonitor from '@/components/site/StationMonitor';
+import TaxRateSetting from '@/components/site/TaxRateSetting';
 import { useDeviceHealth, sinceLabel } from '@/hooks/useDeviceHealth';
+
 import {
   SALES_TREND, CATEGORY_MIX, TAX_JURISDICTIONS, SHIFTS, WEEK_DAYS, REPORTS, REWARD_PROGRAMS,
   PROCESSORS, calcProcessingCost, formatMoney, formatCents,
@@ -220,7 +222,9 @@ const Dashboard: React.FC = () => {
 
         {tab === 'tax' && (
           <div className="space-y-6">
+            <TaxRateSetting />
             <div className="grid gap-4 sm:grid-cols-3">
+
               {kpi('Taxable sales', formatMoney(18420), 'Current filing period', Receipt)}
               {kpi('Tax collected', formatMoney(taxTotal), 'Ready to remit', Percent)}
               {kpi('Exempt sales', formatMoney(640), 'Catering & resale', BarChart3)}

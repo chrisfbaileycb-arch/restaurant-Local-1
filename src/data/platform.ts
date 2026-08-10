@@ -33,6 +33,17 @@ export const HERO_IMAGE =
 export const formatCents = (cents: number | null | undefined) =>
   `$${(((cents ?? 0) as number) / 100).toFixed(2)}`;
 
+/**
+ * Fallback sales tax rate, used only until a shop's own setting loads.
+ * The real number lives on shops.tax_rate and is edited in the dashboard.
+ */
+export const DEFAULT_TAX_RATE = 0.0825;
+
+/** 0.0825 -> "8.25%" */
+export const formatTaxRate = (rate: number | null | undefined) =>
+  `${(((rate ?? DEFAULT_TAX_RATE) as number) * 100).toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}%`;
+
+
 export const formatMoney = (dollars: number) =>
   dollars.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 

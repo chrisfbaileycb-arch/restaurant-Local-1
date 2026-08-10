@@ -72,7 +72,9 @@ const AppLayout: React.FC = () => {
 
   const mockItems = liveMenu.items.slice(0, 9);
   const mockSubtotal = mockItems.slice(0, 3).reduce((s, m) => s + m.price, 0);
-  const mockTax = Math.round(mockSubtotal * 0.0825);
+  // Tax rate comes from the shop's settings, never a hardcoded number.
+  const mockTax = Math.round(mockSubtotal * liveMenu.taxRate);
+
 
   const ranked = [...PROCESSORS]
     .map((p) => ({ ...p, cost: calcProcessingCost(p, volume, ticket) }))

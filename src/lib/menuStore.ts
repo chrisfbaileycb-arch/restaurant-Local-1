@@ -1,8 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import { DEMO_MENU, MENU_CATEGORIES } from '@/data/menu';
+import { DEFAULT_TAX_RATE } from '@/data/platform';
 import type { MenuItem } from '@/data/menu';
 
 export const ACTIVE_SHOP_KEY = 'vibe_active_shop_id';
+
 
 export interface ParsedItem {
   name: string;
@@ -30,6 +32,8 @@ export interface LoadedMenu {
   isDemo: boolean;
   categories: string[];
   items: MenuItem[];
+  /** Sales tax rate from shop settings (shops.tax_rate), e.g. 0.0825 */
+  taxRate: number;
 }
 
 export const DEMO_LOADED_MENU: LoadedMenu = {
@@ -38,7 +42,9 @@ export const DEMO_LOADED_MENU: LoadedMenu = {
   isDemo: true,
   categories: MENU_CATEGORIES,
   items: DEMO_MENU,
+  taxRate: DEFAULT_TAX_RATE,
 };
+
 
 /** Convert a File into the payload the parse-menu edge function expects. */
 export const fileToParsePayload = (
@@ -154,6 +160,12 @@ export const saveParsedMenu = async ({
   return shopId as string;
 };
 
+/** Read the shop's saved tax rate, falling back to the platform default. */
+const readTaxRate = (shop: any): number => {
+  const raw = Number(shop?.tax_rate);
+  return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_TAX_RATE;
+};
+
 /** Load the signed-in owner's menu (or the last shop built on this device). */
 export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu> => {
   let shop: any = null;
@@ -176,6 +188,8 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
   }
   if (!shop) return DEMO_LOADED_MENU;
 
+  const taxRate = readTaxRate(shop);
+
   const { data: cats } = await supabase
     .from('menu_categories')
     .select('id, name, position')
@@ -187,7 +201,8 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
     .eq('shop_id', shop.id)
     .order('position');
 
-  if (!rows || rows.length === 0) return DEMO_LOADED_MENU;
+  // No saved items yet, but the shop's own tax setting still applies.
+  if (!rows || rows.length === 0) return { ...DEMO_LOADED_MENU, shopId: shop.id, taxRate };
 
   const catName = (id: string | null) => cats?.find((c: any) => c.id === id)?.name || 'Menu';
   const items: MenuItem[] = rows.map((r: any) => ({
@@ -207,5 +222,22 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
     isDemo: false,
     categories: [...ordered, ...extras],
     items,
+    taxRate,
   };
+};
+
+/** Read just the tax setting for a shop (used by the settings panel). */
+export const loadShopTaxRate = async (shopId: string): Promise<number> => {
+  const { data } = await supabase.from('shops').select('tax_rate').eq('id', shopId).limit(1);
+  return readTaxRate(data?.[0]);
+};
+
+/** Save the shop's sales tax rate (stored as a decimal, e.g. 0.0825). */
+export const saveShopTaxRate = async (shopId: string, rate: number): Promise<void> => {
+  const safe = Number.isFinite(rate) && rate >= 0 ? Math.min(rate, 1) : DEFAULT_TAX_RATE;
+  const { error } = await supabase
+    .from('shops')
+    .update({ tax_rate: safe, updated_at: new Date().toISOString() })
+    .eq('id', shopId);
+  if (error) throw new Error(error.message || 'Could not save your tax rate');
 };
