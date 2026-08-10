@@ -2,22 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Gift, CreditCard, Download, TrendingUp, Users, Percent, Receipt, Package,
-  Activity, Ban, ShieldCheck, Plug,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/site/PageShell';
-import StationMonitor from '@/components/site/StationMonitor';
-import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import {
   SALES_TREND, CATEGORY_MIX, TAX_JURISDICTIONS, SHIFTS, WEEK_DAYS, REPORTS, REWARD_PROGRAMS,
-  PROCESSORS, DEVICE_KINDS, HEALTH_CHECK, calcProcessingCost, formatMoney, formatCents,
+  PROCESSORS, calcProcessingCost, formatMoney, formatCents,
 } from '@/data/platform';
 
 const TABS = [
-  { id: 'stations', label: 'Stations & hardware', icon: Activity },
   { id: 'sales', label: 'Sales & reports', icon: BarChart3 },
   { id: 'tax', label: 'Sales tax', icon: Receipt },
   { id: 'team', label: 'Schedule & labor', icon: CalendarDays },
@@ -29,11 +25,10 @@ const TABS = [
 const PIE_COLORS = ['#f59e0b', '#0ea5e9', '#10b981', '#f43f5e', '#8b5cf6'];
 
 const Dashboard: React.FC = () => {
-  const [tab, setTab] = useState('stations');
+  const [tab, setTab] = useState('sales');
   const [orders, setOrders] = useState<any[]>([]);
   const [volume, setVolume] = useState(45000);
   const [ticket, setTicket] = useState(14);
-  const { ordersBlocked, blockingDevices, offlineDevices, paired, lastSweep } = useDeviceHealth();
 
   useEffect(() => {
     supabase
@@ -83,27 +78,11 @@ const Dashboard: React.FC = () => {
     <PageShell>
       <div className="border-b border-stone-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">Owner dashboard</h1>
-              <p className="mt-2 text-stone-600">Sample data from a single-location coffee &amp; sandwich shop.</p>
-            </div>
-            <button
-              onClick={() => setTab('stations')}
-              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
-                ordersBlocked ? 'animate-pulse bg-red-600 text-white' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-              }`}
-            >
-              {ordersBlocked ? <Ban className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-              {ordersBlocked
-                ? `Orders held · ${blockingDevices.length} device down`
-                : `${paired.length - offlineDevices.length}/${paired.length} devices connected`}
-            </button>
-          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">Owner dashboard</h1>
+          <p className="mt-2 text-stone-600">Sample data from a single-location coffee &amp; sandwich shop.</p>
           <div className="mt-6 flex flex-wrap gap-2">
             {TABS.map((t) => {
               const Icon = t.icon;
-              const flag = t.id === 'stations' && offlineDevices.length > 0;
               return (
                 <button
                   key={t.id}
@@ -113,11 +92,6 @@ const Dashboard: React.FC = () => {
                   }`}
                 >
                   <Icon className="h-4 w-4" /> {t.label}
-                  {flag && (
-                    <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                      {offlineDevices.length}
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -126,29 +100,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        {tab === 'stations' && (
-          <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {kpi('Paired devices', String(paired.length), `${DEVICE_KINDS.length} drivers available`, Plug)}
-              {kpi('Connected now', String(paired.length - offlineDevices.length), offlineDevices.length ? `${offlineDevices.length} not answering` : 'Everything answered', ShieldCheck)}
-              {kpi('Order entry', ordersBlocked ? 'Held' : 'Open', ordersBlocked ? 'Fix the flagged device to release' : 'Kitchen flow is clear', Activity)}
-              {kpi('Last verified', lastSweep ? new Date(lastSweep).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—', HEALTH_CHECK.label, Receipt)}
-            </div>
-            <StationMonitor />
-            <div className="rounded-2xl border border-stone-200 bg-white p-5">
-              <h2 className="font-bold text-stone-900">Test it from the register</h2>
-              <p className="mt-1 text-sm text-stone-600">
-                Simulate a drop above, then open the POS — the item grid locks until the device answers again.
-              </p>
-              <Link to="/pos" className="mt-4 inline-block rounded-xl bg-stone-900 px-5 py-3 font-semibold text-white">
-                Open the POS
-              </Link>
-            </div>
-          </div>
-        )}
-
         {tab === 'sales' && (
-
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {kpi('Week sales', formatMoney(weekSales), '+12.4% vs last week', TrendingUp)}

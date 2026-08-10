@@ -1,16 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload, Lock,
+  Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload,
 } from 'lucide-react';
 import PageShell from '@/components/site/PageShell';
 import DeviceBar from '@/components/site/DeviceBar';
-import HealthBanner from '@/components/site/HealthBanner';
 
 import type { MenuItem } from '@/data/menu';
 import { formatCents } from '@/data/platform';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
 import type { LoadedMenu } from '@/lib/menuStore';
 
@@ -21,10 +19,8 @@ interface Line extends MenuItem {
 
 const TAX_RATE = 0.0825;
 
-
 const POS: React.FC = () => {
   const { user } = useAuth();
-  const { ordersBlocked, blockingDevices } = useDeviceHealth();
   const [loaded, setLoaded] = useState<LoadedMenu>(DEMO_LOADED_MENU);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
@@ -35,7 +31,6 @@ const POS: React.FC = () => {
   const [member, setMember] = useState('');
   const [memberFound, setMemberFound] = useState<null | { name: string; points: number }>(null);
   const [receipt, setReceipt] = useState<null | { total: number; method: string; offline: boolean }>(null);
-
 
   useEffect(() => {
     let cancelled = false;
@@ -64,8 +59,6 @@ const POS: React.FC = () => {
   const total = subtotal + tax + tip;
 
   const add = (m: MenuItem) => {
-    // Hard stop: a dark kitchen printer / display / reader holds order entry.
-    if (ordersBlocked) return;
     setLines((prev) => {
       const i = prev.findIndex((l) => l.id === m.id);
       if (i >= 0) {
@@ -76,7 +69,6 @@ const POS: React.FC = () => {
       return [...prev, { ...m, qty: 1, lineId: `${m.id}-${Date.now()}` }];
     });
   };
-
 
   const bump = (lineId: string, delta: number) =>
     setLines((prev) => prev.map((l) => (l.lineId === lineId ? { ...l, qty: l.qty + delta } : l)).filter((l) => l.qty > 0));
@@ -147,11 +139,6 @@ const POS: React.FC = () => {
           </div>
         )}
 
-        {/* Live station health — turns red and holds order entry when critical gear drops */}
-        <div className="mt-4">
-          <HealthBanner />
-        </div>
-
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.55fr_1fr]">
           <div>
             {loading ? (
@@ -173,42 +160,24 @@ const POS: React.FC = () => {
                     </button>
                   ))}
                 </div>
-                <div className="relative mt-4">
-                  <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${ordersBlocked ? 'pointer-events-none opacity-30' : ''}`}>
-                    {items.map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => add(m)}
-                        disabled={ordersBlocked}
-                        className="flex min-h-[104px] flex-col justify-between rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 p-4 text-left transition active:scale-95"
-                      >
-                        <span className="text-sm font-bold leading-snug text-white">{m.name}</span>
-                        <span className="mt-2 flex items-center justify-between">
-                          <span className="text-sm font-bold text-amber-400">{formatCents(m.price)}</span>
-                          {m.mods && m.mods.length > 0 && (
-                            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-stone-300">
-                              {m.mods.length} mods
-                            </span>
-                          )}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {ordersBlocked && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-[2px]">
-                      <div className="mx-4 max-w-sm rounded-2xl border-2 border-red-300 bg-white p-5 text-center shadow-xl">
-                        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-red-100 text-red-600">
-                          <Lock className="h-5 w-5" />
-                        </span>
-                        <p className="mt-3 font-extrabold text-stone-900">Order entry locked</p>
-                        <p className="mt-1 text-sm text-stone-600">
-                          Reconnect the {blockingDevices.length} device{blockingDevices.length > 1 ? 's' : ''} flagged above,
-                          then hit Verify now. Items unlock the moment it answers.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {items.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => add(m)}
+                      className="flex min-h-[104px] flex-col justify-between rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 p-4 text-left transition active:scale-95"
+                    >
+                      <span className="text-sm font-bold leading-snug text-white">{m.name}</span>
+                      <span className="mt-2 flex items-center justify-between">
+                        <span className="text-sm font-bold text-amber-400">{formatCents(m.price)}</span>
+                        {m.mods && m.mods.length > 0 && (
+                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-stone-300">
+                            {m.mods.length} mods
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </>
             )}
@@ -216,7 +185,6 @@ const POS: React.FC = () => {
               Layout, modifiers and button order are generated from your menu upload — no configuration screens.
             </p>
           </div>
-
 
           <div className="rounded-2xl border border-stone-200 bg-white p-5">
             <div className="flex items-center justify-between">
