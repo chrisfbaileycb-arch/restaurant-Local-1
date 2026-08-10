@@ -28,7 +28,9 @@ import {
 
 import { useAuth } from '@/contexts/AuthContext';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
+import { computeTax } from '@/lib/taxEngine';
 import type { LoadedMenu } from '@/lib/menuStore';
+
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Monitor, ShoppingBag, Globe, Gift, CalendarDays, BarChart3, CreditCard, Package,
@@ -72,8 +74,13 @@ const AppLayout: React.FC = () => {
 
   const mockItems = liveMenu.items.slice(0, 9);
   const mockSubtotal = mockItems.slice(0, 3).reduce((s, m) => s + m.price, 0);
-  // Tax rate comes from the shop's settings, never a hardcoded number.
-  const mockTax = Math.round(mockSubtotal * liveMenu.taxRate);
+  // Tax runs through the same jurisdiction engine the register uses — state,
+  // county, city and any exemptions — never a hardcoded number.
+  const mockTax = computeTax(
+    mockItems.slice(0, 3).map((m) => ({ amount: m.price, taxClass: m.taxClass })),
+    liveMenu.taxProfile,
+  ).total;
+
 
 
   const ranked = [...PROCESSORS]

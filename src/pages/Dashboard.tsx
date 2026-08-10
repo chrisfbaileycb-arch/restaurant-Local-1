@@ -11,6 +11,10 @@ import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/site/PageShell';
 import StationMonitor from '@/components/site/StationMonitor';
 import TaxRateSetting from '@/components/site/TaxRateSetting';
+import TaxJurisdictions from '@/components/site/TaxJurisdictions';
+import ItemTaxClasses from '@/components/site/ItemTaxClasses';
+import PayrollTaxSetting from '@/components/site/PayrollTaxSetting';
+
 import { useDeviceHealth, sinceLabel } from '@/hooks/useDeviceHealth';
 
 import {
@@ -222,12 +226,22 @@ const Dashboard: React.FC = () => {
 
         {tab === 'tax' && (
           <div className="space-y-6">
-            <TaxRateSetting />
-            <div className="grid gap-4 sm:grid-cols-3">
+            {/* Stacked jurisdictions: state + county + city + special districts */}
+            <TaxJurisdictions />
 
+            {/* Which items are taxed as what (alcohol, grocery, never-taxed) */}
+            <ItemTaxClasses />
+
+            {/* Single blended rate — used only until jurisdictions are added */}
+            <TaxRateSetting />
+
+            {/* Employer payroll / unemployment taxes — calculated at payroll, not at the register */}
+            <PayrollTaxSetting />
+
+            <div className="grid gap-4 sm:grid-cols-3">
               {kpi('Taxable sales', formatMoney(18420), 'Current filing period', Receipt)}
               {kpi('Tax collected', formatMoney(taxTotal), 'Ready to remit', Percent)}
-              {kpi('Exempt sales', formatMoney(640), 'Catering & resale', BarChart3)}
+              {kpi('Exempt sales', formatMoney(640), 'Grocery, resale & gift cards', BarChart3)}
             </div>
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
               <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
@@ -262,11 +276,12 @@ const Dashboard: React.FC = () => {
               </table>
             </div>
             <p className="text-sm text-stone-500">
-              Monthly, quarterly and annual filings are generated automatically from POS and online orders — including
-              tips, exempt sales and refunds.
+              Sample filing figures. Live filings are generated from POS and online orders using the jurisdictions
+              above — taxable vs exempt sales are split per authority, including tips and refunds.
             </p>
           </div>
         )}
+
 
         {tab === 'team' && (
           <div className="space-y-6">

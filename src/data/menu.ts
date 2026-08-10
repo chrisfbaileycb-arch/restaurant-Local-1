@@ -1,15 +1,20 @@
 // Demo menu used by the POS terminal demo and the onboarding wizard preview.
 // Single source of truth — do not duplicate these items elsewhere.
 
+import type { TaxClassId } from '@/data/taxClasses';
+
 export interface MenuItem {
   id: string;
   name: string;
   price: number; // cents
   category: string;
   mods?: string[];
+  /** Which tax class this item belongs to (see src/data/taxClasses.ts). */
+  taxClass?: TaxClassId;
 }
 
 export const MENU_CATEGORIES = ['Popular', 'Food', 'Coffee', 'Cold Bar', 'Sweets', 'Beer & Wine'];
+
 
 export const DEMO_MENU: MenuItem[] = [
   { id: 'm1', name: 'Breakfast Burrito', price: 1050, category: 'Popular', mods: ['Add avocado +$1.50', 'No cheese', 'Extra salsa'] },
@@ -32,11 +37,12 @@ export const DEMO_MENU: MenuItem[] = [
   { id: 'm18', name: 'Brownie', price: 395, category: 'Sweets' },
   { id: 'm19', name: 'Cake Slice', price: 650, category: 'Sweets', mods: ['Add candle'] },
   { id: 'm20', name: 'Sugar Cookie', price: 325, category: 'Sweets' },
-  { id: 'm21', name: 'Draft IPA 16oz', price: 700, category: 'Beer & Wine' },
-  { id: 'm22', name: 'Lager Can', price: 600, category: 'Beer & Wine' },
-  { id: 'm23', name: 'House Red', price: 900, category: 'Beer & Wine' },
-  { id: 'm24', name: 'Ranch Water', price: 850, category: 'Beer & Wine', mods: ['Extra lime'] },
+  { id: 'm21', name: 'Draft IPA 16oz', price: 700, category: 'Beer & Wine', taxClass: 'alcohol' },
+  { id: 'm22', name: 'Lager Can', price: 600, category: 'Beer & Wine', taxClass: 'alcohol' },
+  { id: 'm23', name: 'House Red', price: 900, category: 'Beer & Wine', taxClass: 'alcohol' },
+  { id: 'm24', name: 'Ranch Water', price: 850, category: 'Beer & Wine', mods: ['Extra lime'], taxClass: 'alcohol' },
 ];
+
 
 // What the parser "finds" during the onboarding upload simulation.
 export const PARSED_PREVIEW = [

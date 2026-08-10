@@ -1,6 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import { DEMO_MENU, MENU_CATEGORIES } from '@/data/menu';
 import { DEFAULT_TAX_RATE } from '@/data/platform';
+import { DEFAULT_TAX_CLASS, TAX_CLASSES } from '@/data/taxClasses';
+import type { TaxClassId } from '@/data/taxClasses';
+import { loadTaxProfile, EMPTY_TAX_PROFILE } from '@/lib/taxEngine';
+import type { TaxProfile } from '@/lib/taxEngine';
 import type { MenuItem } from '@/data/menu';
 
 export const ACTIVE_SHOP_KEY = 'vibe_active_shop_id';
@@ -32,8 +36,10 @@ export interface LoadedMenu {
   isDemo: boolean;
   categories: string[];
   items: MenuItem[];
-  /** Sales tax rate from shop settings (shops.tax_rate), e.g. 0.0825 */
+  /** Blended fallback rate from shops.tax_rate — used only when no jurisdictions exist. */
   taxRate: number;
+  /** Every state / county / city / special district this shop collects for. */
+  taxProfile: TaxProfile;
 }
 
 export const DEMO_LOADED_MENU: LoadedMenu = {
@@ -43,7 +49,25 @@ export const DEMO_LOADED_MENU: LoadedMenu = {
   categories: MENU_CATEGORIES,
   items: DEMO_MENU,
   taxRate: DEFAULT_TAX_RATE,
+  taxProfile: EMPTY_TAX_PROFILE,
 };
+
+/** Words that almost always mean "this is alcohol" on an uploaded menu. */
+const ALCOHOL_HINTS = /\b(beer|wine|ale|ipa|lager|stout|cider|seltzer|cocktail|margarita|mimosa|whiskey|bourbon|vodka|tequila|rum|gin|sangria|prosecco|champagne|liquor|spirits|draft|draught|pilsner|rosé|rose wine|shot)\b/i;
+
+/** Best-guess tax class for an item that has never been classified. */
+export const guessTaxClass = (name: string, category?: string): TaxClassId => {
+  const hay = `${category || ''} ${name || ''}`;
+  if (ALCOHOL_HINTS.test(hay)) return 'alcohol';
+  if (/\b(gift card|gratuity|donation|deposit)\b/i.test(hay)) return 'exempt';
+  if (/\b(merch|shirt|tee|hoodie|mug|hat|sticker|tote|bag of beans|whole bean|retail)\b/i.test(hay)) return 'merch';
+  if (/\b(grocery|packaged|by the pound|bulk|loaf|dozen eggs|pantry)\b/i.test(hay)) return 'grocery';
+  return DEFAULT_TAX_CLASS;
+};
+
+const normalizeClass = (value: any, name: string, category?: string): TaxClassId =>
+  (TAX_CLASSES.find((t) => t.id === value)?.id as TaxClassId) || guessTaxClass(name, category);
+
 
 
 /** Convert a File into the payload the parse-menu edge function expects. */
@@ -189,6 +213,8 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
   if (!shop) return DEMO_LOADED_MENU;
 
   const taxRate = readTaxRate(shop);
+  // Jurisdictions (state / county / city / special) come from the shop's own setup.
+  const taxProfile = await loadTaxProfile(shop.id, taxRate);
 
   const { data: cats } = await supabase
     .from('menu_categories')
@@ -197,21 +223,27 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
     .order('position');
   const { data: rows } = await supabase
     .from('menu_items')
-    .select('id, name, price, category_id, modifiers, description')
+    .select('id, name, price, category_id, modifiers, description, tax_class')
     .eq('shop_id', shop.id)
     .order('position');
 
-  // No saved items yet, but the shop's own tax setting still applies.
-  if (!rows || rows.length === 0) return { ...DEMO_LOADED_MENU, shopId: shop.id, taxRate };
+  // No saved items yet, but the shop's own tax setup still applies.
+  if (!rows || rows.length === 0) {
+    return { ...DEMO_LOADED_MENU, shopId: shop.id, taxRate, taxProfile };
+  }
 
   const catName = (id: string | null) => cats?.find((c: any) => c.id === id)?.name || 'Menu';
-  const items: MenuItem[] = rows.map((r: any) => ({
-    id: r.id,
-    name: r.name,
-    price: r.price,
-    category: catName(r.category_id),
-    mods: Array.isArray(r.modifiers) ? r.modifiers : [],
-  }));
+  const items: MenuItem[] = rows.map((r: any) => {
+    const category = catName(r.category_id);
+    return {
+      id: r.id,
+      name: r.name,
+      price: r.price,
+      category,
+      mods: Array.isArray(r.modifiers) ? r.modifiers : [],
+      taxClass: normalizeClass(r.tax_class, r.name, category),
+    };
+  });
 
   const ordered = (cats || []).map((c: any) => c.name).filter((n: string) => items.some((i) => i.category === n));
   const extras = Array.from(new Set(items.map((i) => i.category))).filter((n) => !ordered.includes(n));
@@ -223,8 +255,10 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
     categories: [...ordered, ...extras],
     items,
     taxRate,
+    taxProfile,
   };
 };
+
 
 /** Read just the tax setting for a shop (used by the settings panel). */
 export const loadShopTaxRate = async (shopId: string): Promise<number> => {

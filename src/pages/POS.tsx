@@ -9,10 +9,13 @@ import HealthBanner from '@/components/site/HealthBanner';
 
 import type { MenuItem } from '@/data/menu';
 import { formatCents, formatTaxRate } from '@/data/platform';
+import { taxClass as taxClassDef } from '@/data/taxClasses';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
+import { computeTax } from '@/lib/taxEngine';
 import type { LoadedMenu } from '@/lib/menuStore';
+
 
 
 interface Line extends MenuItem {
@@ -58,12 +61,21 @@ const POS: React.FC = () => {
     [loaded, category]
   );
 
-  // Tax comes from shop settings (shops.tax_rate), not a hardcoded rate.
-  const taxRate = loaded.taxRate;
+  // Tax is computed per line, per jurisdiction — state, county, city and any
+  // special district, each with its own exemptions. Nothing is hardcoded.
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const tax = Math.round(subtotal * taxRate);
+  const taxResult = useMemo(
+    () =>
+      computeTax(
+        lines.map((l) => ({ amount: l.price * l.qty, taxClass: l.taxClass })),
+        loaded.taxProfile,
+      ),
+    [lines, loaded.taxProfile],
+  );
+  const tax = taxResult.total;
   const tip = Math.round(subtotal * (tipPct / 100));
   const total = subtotal + tax + tip;
+
 
 
   const add = (m: MenuItem) => {
@@ -244,8 +256,16 @@ const POS: React.FC = () => {
                   <div key={l.lineId} className="flex items-center gap-2 rounded-xl border border-stone-200 p-2.5">
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-stone-900">{l.name}</p>
-                      <p className="text-xs text-stone-500">{formatCents(l.price)} each</p>
+                      <p className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500">
+                        {formatCents(l.price)} each
+                        {l.taxClass && l.taxClass !== 'prepared_food' && (
+                          <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold ${taxClassDef(l.taxClass).tone}`}>
+                            {taxClassDef(l.taxClass).short}
+                          </span>
+                        )}
+                      </p>
                     </div>
+
                     <div className="flex items-center rounded-lg border border-stone-300">
                       <button onClick={() => bump(l.lineId, -1)} className="px-2 py-1 text-stone-600" aria-label="Less">
                         <Minus className="h-3.5 w-3.5" />
@@ -304,19 +324,52 @@ const POS: React.FC = () => {
 
             <div className="mt-4 space-y-1.5 border-t border-stone-200 pt-4 text-sm">
               <div className="flex justify-between text-stone-600"><span>Subtotal</span><span>{formatCents(subtotal)}</span></div>
-              <div className="flex justify-between text-stone-600">
-                <span>
-                  Tax ({formatTaxRate(taxRate)})
-                  <Link to="/dashboard" className="ml-1.5 text-[11px] font-semibold text-amber-700 hover:text-amber-800">
-                    edit
-                  </Link>
-                </span>
-                <span>{formatCents(tax)}</span>
-              </div>
+
+              {/* One line per jurisdiction the shop actually collects for */}
+              {taxResult.lines.length === 0 ? (
+                <div className="flex justify-between text-stone-600">
+                  <span>
+                    Tax
+                    <Link to="/dashboard" className="ml-1.5 text-[11px] font-semibold text-amber-700 hover:text-amber-800">
+                      set up
+                    </Link>
+                  </span>
+                  <span>{formatCents(0)}</span>
+                </div>
+              ) : (
+                taxResult.lines.map((j) => (
+                  <div key={j.id} className="flex justify-between text-stone-600">
+                    <span>
+                      {j.name} ({formatTaxRate(j.rate)})
+                      {j.id === 'blended' && (
+                        <Link to="/dashboard" className="ml-1.5 text-[11px] font-semibold text-amber-700 hover:text-amber-800">
+                          edit
+                        </Link>
+                      )}
+                    </span>
+                    <span>{formatCents(j.amount)}</span>
+                  </div>
+                ))
+              )}
+
+              {taxResult.exemptSubtotal > 0 && (
+                <div className="flex justify-between text-xs text-emerald-700">
+                  <span>Non-taxable items</span>
+                  <span>{formatCents(taxResult.exemptSubtotal)}</span>
+                </div>
+              )}
+
+              {taxResult.lines.length > 1 && (
+                <div className="flex justify-between border-t border-dashed border-stone-200 pt-1.5 font-semibold text-stone-700">
+                  <span>Total tax ({formatTaxRate(taxResult.effectiveRate)} effective)</span>
+                  <span>{formatCents(tax)}</span>
+                </div>
+              )}
 
               <div className="flex justify-between text-stone-600"><span>Tip</span><span>{formatCents(tip)}</span></div>
               <div className="flex justify-between pt-1 text-lg font-extrabold text-stone-900"><span>Total</span><span>{formatCents(total)}</span></div>
             </div>
+
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <button
