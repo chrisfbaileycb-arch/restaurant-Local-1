@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Monitor, ShoppingBag, Globe, Gift, CalendarDays, BarChart3, CreditCard, Package,
-  ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck, Wallet, Heart,
+  ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck, Wallet, Heart, Bot,
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
@@ -30,7 +30,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
 import { computeTax } from '@/lib/taxEngine';
 import type { LoadedMenu } from '@/lib/menuStore';
-import CopilotWorkspace from '@/components/site/CopilotWorkspace';
+import CopilotWorkspace, { readPinned } from '@/components/site/CopilotWorkspace';
+import type { CopilotSeed } from '@/components/site/CopilotSidebar';
 import { useOps } from '@/lib/opsStore';
 
 
@@ -49,6 +50,7 @@ const FEATURE_TONES = [
   'from-indigo-500 to-blue-500',
 ];
 
+
 const AppLayout: React.FC = () => {
   const { user } = useAuth();
   const ops = useOps();
@@ -57,8 +59,31 @@ const AppLayout: React.FC = () => {
   const [ticket, setTicket] = useState(14);
   const [reportFilter, setReportFilter] = useState<'All' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly'>('All');
   const [online, setOnline] = useState(true);
-  const [railCollapsed, setRailCollapsed] = useState(false);
   const [liveMenu, setLiveMenu] = useState<LoadedMenu>(DEMO_LOADED_MENU);
+
+  // ---- Copilot drawer -------------------------------------------------
+  // Collapsed by default on the public page so the hero stays full width.
+  // A signed-in operator who pinned it last shift gets it docked again.
+  const [pinned, setPinned] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [seed, setSeed] = useState<CopilotSeed | null>(null);
+  const seedCount = useRef(0);
+
+  useEffect(() => {
+    if (user && readPinned()) {
+      setPinned(true);
+      setCopilotOpen(true);
+    }
+  }, [user]);
+
+  /** Slide the copilot out and (optionally) play a command into the stream. */
+  const demoCopilot = useCallback((command?: string) => {
+    setCopilotOpen(true);
+    if (command) {
+      seedCount.current += 1;
+      setSeed({ text: command, nonce: seedCount.current });
+    }
+  }, []);
 
   useEffect(() => {
     supabase
@@ -102,11 +127,19 @@ const AppLayout: React.FC = () => {
 
   return (
     <div
-      className={`flex min-h-screen flex-col bg-amber-50/40 transition-[padding] ${
-        railCollapsed ? 'lg:pl-14' : 'lg:pl-[380px]'
+      className={`flex min-h-screen flex-col bg-amber-50/40 transition-[padding] duration-300 ${
+        pinned && copilotOpen ? 'lg:pl-[380px]' : ''
       }`}
     >
-      <CopilotWorkspace menu={liveMenu} collapsed={railCollapsed} onToggle={setRailCollapsed} />
+      <CopilotWorkspace
+        menu={liveMenu}
+        open={copilotOpen}
+        onOpenChange={setCopilotOpen}
+        pinned={pinned}
+        onPinnedChange={setPinned}
+        canPin={!!user}
+        seed={seed}
+      />
       <Header />
 
       {/* ---------------- HERO ---------------- */}
@@ -124,14 +157,16 @@ const AppLayout: React.FC = () => {
         <div className="relative mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_.9fr] lg:py-28">
           <div>
             <span className="inline-flex animate-pop-in items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 animate-wiggle text-amber-300" /> No code. No contracts. No commission.
+              <Sparkles className="h-3.5 w-3.5 animate-wiggle text-amber-300" /> {BRAND.badge}
             </span>
-            <h1 className="mt-6 animate-rise-in text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Upload your menu.<br />
-              <span className="bg-gradient-to-r from-amber-200 via-yellow-300 to-lime-200 bg-clip-text text-transparent">
-                Launch your whole business.
-              </span>
+            <h1 className="mt-6 animate-rise-in text-5xl font-extrabold leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-7xl">
+              {BRAND.headline}
             </h1>
+            <p className="mt-4 animate-rise-in text-2xl font-extrabold leading-snug tracking-tight sm:text-3xl [animation-delay:80ms]">
+              <span className="bg-gradient-to-r from-amber-200 via-yellow-300 to-lime-200 bg-clip-text text-transparent">
+                {BRAND.tagline}
+              </span>
+            </p>
             <p className="mt-5 inline-flex animate-rise-in items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2 text-sm font-bold text-rose-100 ring-1 ring-white/20">
               <Heart className="h-4 w-4 animate-wiggle fill-current text-rose-300" /> {BRAND.promise}
             </p>
@@ -149,12 +184,15 @@ const AppLayout: React.FC = () => {
                   <Upload className="h-5 w-5" /> Upload my menu
                 </Link>
               </span>
-              <Link
-                to="/pos"
+              {/* Slides the copilot out and plays a live command instead of
+                  jumping straight to the register. */}
+              <button
+                onClick={() => demoCopilot(mockItems[0] ? `86 the ${mockItems[0].name}` : 'labor margin audit')}
+
                 className="inline-flex items-center gap-2 rounded-xl border-2 border-white/50 px-6 py-3.5 font-bold text-white transition hover:bg-white/15"
               >
-                Try the POS demo <ArrowRight className="h-4 w-4 animate-bob-x" />
-              </Link>
+                <Bot className="h-4 w-4" /> Try the POS demo <ArrowRight className="h-4 w-4 animate-bob-x" />
+              </button>
               <Pointer label="60 seconds, promise" dir="left" tone="amber" className="hidden sm:inline-flex" />
             </div>
 
@@ -176,7 +214,10 @@ const AppLayout: React.FC = () => {
                   {liveMenu.isDemo ? 'Station 1 · Front counter' : `Station 1 · ${liveMenu.shopName}`}
                 </span>
                 <button
-                  onClick={() => setOnline((o) => !o)}
+                  onClick={() => {
+                    setOnline((o) => !o);
+                    demoCopilot(online ? 'wifi just dropped, run hardware diagnostics' : 'wifi is back, sync the queue');
+                  }}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold transition ${
                     online ? 'bg-emerald-400/20 text-emerald-300' : 'bg-amber-400/20 text-amber-300'
                   }`}
@@ -187,9 +228,11 @@ const AppLayout: React.FC = () => {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {mockItems.map((m, i) => (
-                  <div
+                  <button
                     key={m.id}
-                    className={`relative rounded-xl bg-gradient-to-br p-3 text-left transition ${
+                    onClick={() => demoCopilot(m.off ? `restore ${m.name}` : `86 the ${m.name}`)}
+                    title={m.off ? `Put ${m.name} back on` : `86 the ${m.name}`}
+                    className={`relative rounded-xl bg-gradient-to-br p-3 text-left transition hover:scale-[1.04] hover:ring-2 hover:ring-amber-300/70 ${
                       ['from-fuchsia-500/25 to-violet-500/10', 'from-sky-500/25 to-cyan-500/10', 'from-amber-400/25 to-orange-500/10'][i % 3]
                     } ${m.off ? 'opacity-35 grayscale' : ''}`}
                   >
@@ -200,7 +243,7 @@ const AppLayout: React.FC = () => {
                         86
                       </span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="mt-3 rounded-xl bg-white/5 p-3">
@@ -224,10 +267,11 @@ const AppLayout: React.FC = () => {
             </div>
 
             <p className="mt-3 text-center text-xs text-white/70">
-              Tell the copilot to 86 an item or drop a price — this terminal, the online cart and your public menu
-              all change together.
+              Tap any button above — the Operator Copilot slides out and runs the command against this terminal, the
+              online cart and your public menu together.
             </p>
           </div>
+
 
         </div>
       </section>

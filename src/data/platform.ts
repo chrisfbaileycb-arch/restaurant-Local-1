@@ -7,14 +7,20 @@ export const BRAND = {
   name: 'Love Local Eats POS',
   shortName: 'Love Local Eats',
   wordmark: { love: 'Love', local: 'Local Eats', kicker: 'POS' },
-  tagline: 'Upload your menu. Launch your whole business.',
+  /** Small all-caps badge that sits above the headline. */
+  badge: 'No contracts. No hardware lock-in.',
+  /** The name itself is the headline. */
+  headline: 'Love Local Eats',
+  /** The one line that says what it does. */
+  tagline: 'Vibe-Code Your POS & Website with Intelligent Design.',
   subtitle:
-    'The no-code restaurant operating system built with heart for independent operators: touchscreen POS, table tabs, kitchen & bar tickets, online ordering, a one-page website, rewards, scheduling and every report your accountant asks for — built automatically from one menu upload.',
+    'The no-code restaurant operating system built with heart for independent operators: touchscreen POS, table tabs, kitchen & bar tickets, online ordering, a one-page website, rewards, scheduling, and every report your accountant asks for — built automatically from one simple vibe-coded setup.',
   promise: 'Built with heart for independent operators. No corporate contracts, no lock-in.',
   supportPhone: '(888) 555-5683',
   supportEmail: 'hello@lovelocaleatspos.com',
   domain: 'lovelocaleatspos.com',
 };
+
 
 
 

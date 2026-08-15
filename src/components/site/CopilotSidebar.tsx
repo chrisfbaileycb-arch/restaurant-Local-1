@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Sparkles, Send, Mic, MicOff, Ban, Percent, Users, Timer, FileCheck2, Loader2, Copy, Check,
-  ChevronDown, Bot, ClipboardList,
+  ChevronDown, Bot, ClipboardList, ChevronLeft, Pin, PinOff,
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
@@ -16,6 +16,25 @@ import type { LoadedMenu } from '@/lib/menuStore';
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Ban, Percent, Users, Timer, FileCheck2,
 };
+
+/** A command pushed in from outside the drawer (hero buttons, terminal taps). */
+export interface CopilotSeed {
+  text: string;
+  /** bump this to replay the same text again */
+  nonce: number;
+}
+
+interface SidebarProps {
+  menu: LoadedMenu;
+  seed?: CopilotSeed | null;
+  /** slide the drawer away */
+  onCollapse?: () => void;
+  /** pinning is only offered to signed-in operators */
+  canPin?: boolean;
+  pinned?: boolean;
+  onTogglePin?: () => void;
+}
+
 
 interface Msg {
   id: string;
@@ -58,7 +77,9 @@ const PayloadBlock: React.FC<{ payload: any }> = ({ payload }) => {
   );
 };
 
-const CopilotSidebar: React.FC<{ menu: LoadedMenu }> = ({ menu }) => {
+const CopilotSidebar: React.FC<SidebarProps> = ({
+  menu, seed, onCollapse, canPin, pinned, onTogglePin,
+}) => {
   const ops = useOps();
   const { verifyOne, devices, simulateDrop } = useDeviceHealth();
   const [input, setInput] = useState('');
@@ -67,6 +88,7 @@ const CopilotSidebar: React.FC<{ menu: LoadedMenu }> = ({ menu }) => {
   const [showSkills, setShowSkills] = useState(true);
   const streamRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
 
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -209,21 +231,61 @@ const CopilotSidebar: React.FC<{ menu: LoadedMenu }> = ({ menu }) => {
     setListening(true);
   };
 
+  // A command handed in from the marketing page (hero CTA, terminal taps).
+  // The drawer slides open first, then the command plays into the stream.
+  const lastSeed = useRef(0);
+  useEffect(() => {
+    if (!seed || seed.nonce === lastSeed.current) return;
+    lastSeed.current = seed.nonce;
+    const t = window.setTimeout(() => send(seed.text), 480);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.nonce]);
+
   return (
     <div className="flex h-full flex-col bg-slate-900 text-white">
       {/* Header */}
-      <div className="flex items-center gap-2.5 border-b border-white/10 bg-gradient-to-r from-violet-700 via-fuchsia-700 to-orange-600 px-4 py-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+      <div className="flex items-center gap-2.5 border-b border-white/10 bg-gradient-to-r from-violet-700 via-fuchsia-700 to-orange-600 px-3 py-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
           <Bot className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-extrabold leading-tight">Love Local Operator Copilot</p>
           <p className="flex items-center gap-1 text-[11px] text-white/80">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
             Watching the floor · {menu.isDemo ? 'demo shop' : menu.shopName}
           </p>
         </div>
+
+        {/* Pin (signed-in operators only) + collapse */}
+        {canPin && onTogglePin && (
+          <button
+            onClick={onTogglePin}
+            title={pinned ? 'Unpin — let the copilot slide away' : 'Pin the copilot beside the register'}
+            aria-pressed={pinned}
+            className={`hidden shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-extrabold uppercase tracking-wide transition lg:inline-flex ${
+              pinned ? 'bg-white text-violet-700' : 'bg-white/15 text-white hover:bg-white/25'
+            }`}
+          >
+            {pinned ? <Pin className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
+            {pinned ? 'Pinned' : 'Pin'}
+          </button>
+        )}
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            aria-label="Collapse the copilot"
+            title="Slide the copilot away"
+            className="shrink-0 rounded-lg p-1.5 text-white/80 transition hover:bg-white/20 hover:text-white"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
       </div>
+
 
       {/* Quick actions */}
       <div className="border-b border-white/10 px-3 py-2.5">
