@@ -1,17 +1,45 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Globe, MapPin, Upload, Save, Check, Loader2, Link2, Briefcase, ImageIcon, Trash2 } from 'lucide-react';
+import {
+  Globe, MapPin, Upload, Save, Check, Loader2, Link2, Briefcase, ImageIcon, Trash2,
+  Megaphone, Phone, RefreshCw, MessageSquare, Star, ExternalLink, ShoppingBag,
+} from 'lucide-react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { loadShopMenu } from '@/lib/menuStore';
+import { loadShopMenu, DEMO_LOADED_MENU, type LoadedMenu } from '@/lib/menuStore';
 import { askCopilot } from '@/components/site/CopilotDock';
+import WebsiteMenuPanel from '@/components/site/WebsiteMenuPanel';
 import {
-  loadSiteSettings, saveSiteSettings, uploadShopMedia, emptySiteSettings,
-  SITE_SECTIONS, SOCIAL_FIELDS, missingSitePieces, type SiteSettings,
+  loadSiteSettings, saveSiteSettings, uploadShopMedia, emptySiteSettings, fetchGooglePlace, placeToSettings,
+  SITE_SECTIONS, SOCIAL_FIELDS, missingSitePieces, type SiteSettings, type GooglePlaceResult,
 } from '@/lib/siteSettings';
 
-/** Dashboard → Website: the real, saved setup the copilot reads and writes. */
+/** Small on/off switch used across the panels. */
+const Toggle: React.FC<{ on: boolean; onChange: () => void; label: string }> = ({ on, onChange, label }) => (
+  <button
+    onClick={onChange}
+    role="switch"
+    aria-checked={on}
+    aria-label={label}
+    className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-emerald-600' : 'bg-stone-300'}`}
+  >
+    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+  </button>
+);
+
+const Field: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
+  <div>
+    <label className="text-xs font-bold uppercase tracking-wide text-stone-500">{label}</label>
+    {children}
+    {hint && <p className="mt-1 text-xs text-stone-500">{hint}</p>}
+  </div>
+);
+
+const inputCls = 'mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-500';
+
+/** Dashboard → Website: the real, saved one-page site the copilot reads and writes. */
 const WebsiteSettings: React.FC = () => {
   const { user } = useAuth();
+  const [menu, setMenu] = useState<LoadedMenu>(DEMO_LOADED_MENU);
   const [shopId, setShopId] = useState<string | null>(null);
   const [shopName, setShopName] = useState('your shop');
   const [form, setForm] = useState<SiteSettings | null>(null);
@@ -20,19 +48,26 @@ const WebsiteSettings: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState<'logo' | 'dish' | null>(null);
-  const [dishes, setDishes] = useState<string[]>([]);
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [place, setPlace] = useState<GooglePlaceResult | null>(null);
   const logoInput = useRef<HTMLInputElement>(null);
   const dishInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
-    loadShopMenu(user?.id || null).then(async (menu) => {
+    loadShopMenu(user?.id || null).then(async (m) => {
       if (cancelled) return;
-      setShopName(menu.isDemo ? 'your shop' : menu.shopName);
-      setShopId(menu.shopId);
-      if (menu.shopId) {
-        const s = await loadSiteSettings(menu.shopId);
-        if (!cancelled) setForm(s || emptySiteSettings(menu.shopId));
+      setMenu(m);
+      setShopName(m.isDemo ? 'your shop' : m.shopName);
+      setShopId(m.shopId);
+      if (m.shopId) {
+        const s = await loadSiteSettings(m.shopId);
+        if (!cancelled) {
+          const next = s || emptySiteSettings(m.shopId);
+          setForm(next);
+          setPlaceQuery(next.google_place_id || (m.isDemo ? '' : m.shopName));
+        }
       }
       setLoading(false);
     });
@@ -56,14 +91,34 @@ const WebsiteSettings: React.FC = () => {
     });
   };
 
+  const syncGoogle = async () => {
+    if (!placeQuery.trim()) return;
+    setSyncing(true);
+    setError('');
+    setPlace(null);
+    try {
+      const result = await fetchGooglePlace(placeQuery.trim());
+      if (!result.success) {
+        setError(result.error || 'Google did not find that listing.');
+      } else {
+        setPlace(result);
+        patch(placeToSettings(result));
+      }
+    } catch (e: any) {
+      setError(e.message || 'Google lookup failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const upload = async (file: File | undefined, kind: 'logo' | 'dish') => {
-    if (!file || !shopId) return;
+    if (!file || !shopId || !form) return;
     setUploading(kind);
     setError('');
     try {
       const url = await uploadShopMedia(file, shopId, kind);
       if (kind === 'logo') patch({ logo_url: url });
-      else setDishes((d) => [url, ...d].slice(0, 8));
+      else patch({ photos: [url, ...form.photos].slice(0, 12) });
     } catch (e: any) {
       setError(e.message || 'Upload failed');
     } finally {
@@ -101,7 +156,7 @@ const WebsiteSettings: React.FC = () => {
         <Globe className="mx-auto h-6 w-6 text-amber-600" />
         <p className="mt-3 font-bold text-stone-900">No shop built yet</p>
         <p className="mx-auto mt-1 max-w-md text-sm text-stone-600">
-          Upload a menu in the setup wizard first — then your domain, Google listing, logo and sections all save here.
+          Upload a menu in the setup wizard first — then your domain, Google listing, banner, photos and sections all save here.
         </p>
         <a href="/onboarding" className="mt-4 inline-block rounded-xl bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white">
           Build my store
@@ -114,11 +169,12 @@ const WebsiteSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header + save */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-5">
         <div>
-          <h2 className="font-bold text-stone-900">Website &amp; hosting for {shopName}</h2>
+          <h2 className="font-bold text-stone-900">Website setup for {shopName}</h2>
           <p className="text-sm text-stone-600">
-            {gaps.length ? `Still needed: ${gaps.join(', ')}.` : 'Everything is saved — this site is ready to publish.'}
+            {gaps.length ? `Still needed: ${gaps.join(', ')}.` : 'Everything is saved — this page is ready to publish.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -141,55 +197,127 @@ const WebsiteSettings: React.FC = () => {
 
       {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
 
+      {/* Announcement banner */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-bold text-stone-900">
+              <Megaphone className="h-4 w-4 text-amber-600" /> Announcement banner
+            </p>
+            <p className="text-xs text-stone-500">One line across the very top of the page — specials, weather, holiday hours.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-stone-500">{form.announcement_on ? 'Showing' : 'Hidden'}</span>
+            <Toggle on={form.announcement_on} onChange={() => patch({ announcement_on: !form.announcement_on })} label="Show banner" />
+          </div>
+        </div>
+        <input
+          value={form.announcement || ''}
+          onChange={(e) => patch({ announcement: e.target.value })}
+          placeholder="Friday fish fry, 4–8pm. Patio open."
+          maxLength={140}
+          className={inputCls}
+        />
+        {form.announcement && form.announcement_on && (
+          <div className="mt-3 rounded-xl bg-stone-900 px-4 py-2.5 text-center text-sm font-bold text-amber-300">
+            {form.announcement}
+          </div>
+        )}
+        {form.holiday_note && (
+          <p className="mt-2 text-xs font-semibold text-stone-600">Holiday hours note on file: {form.holiday_note}</p>
+        )}
+        <button
+          onClick={() => askCopilot('Post a banner about ')}
+          className="mt-3 text-xs font-bold text-amber-700 hover:text-amber-800"
+        >
+          Or just tell the copilot: “Post a banner about our Friday fish fry”
+        </button>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Domain + Google */}
+        {/* Google Business sync */}
         <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5">
           <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-stone-900">
-              <Globe className="h-4 w-4 text-amber-600" /> Domain name
-            </label>
+            <p className="flex items-center gap-2 text-sm font-bold text-stone-900">
+              <MapPin className="h-4 w-4 text-amber-600" /> Google Business sync
+            </p>
+            <p className="text-xs text-stone-500">
+              Enter your Place ID, profile link or business name. We pull the verified address, weekly hours, phone and map link.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={placeQuery}
+              onChange={(e) => setPlaceQuery(e.target.value)}
+              placeholder="Smith's Diner, Asheville NC — or ChIJ… place ID"
+              className="min-w-0 flex-1 rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-500"
+            />
+            <button
+              onClick={syncGoogle}
+              disabled={syncing || !placeQuery.trim()}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-stone-900 transition hover:bg-amber-400 disabled:opacity-50"
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {syncing ? 'Syncing…' : 'Sync'}
+            </button>
+          </div>
+
+          {(form.address || form.phone || form.hours.length > 0) && (
+            <div className="space-y-2 rounded-xl border border-stone-200 p-4">
+              {form.business_name && <p className="text-sm font-bold text-stone-900">{form.business_name}</p>}
+              {form.address && (
+                <p className="flex items-start gap-2 text-sm text-stone-700">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-stone-400" /> {form.address}
+                </p>
+              )}
+              {form.phone && (
+                <p className="flex items-center gap-2 text-sm text-stone-700">
+                  <Phone className="h-3.5 w-3.5 text-stone-400" />
+                  <a href={`tel:${form.phone}`} className="font-semibold text-amber-700">{form.phone}</a>
+                </p>
+              )}
+              {place?.rating != null && (
+                <p className="flex items-center gap-1.5 text-sm text-stone-700">
+                  <Star className="h-3.5 w-3.5 text-amber-500" /> {place.rating} ({place.reviewCount} reviews)
+                </p>
+              )}
+              {form.hours.length > 0 && (
+                <ul className="mt-1 space-y-0.5">
+                  {form.hours.map((h) => (
+                    <li key={h} className="text-xs text-stone-600">{h}</li>
+                  ))}
+                </ul>
+              )}
+              {form.map_url && (
+                <a
+                  href={form.map_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700"
+                >
+                  Open map &amp; directions <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              {form.google_synced_at && (
+                <p className="text-[11px] text-stone-400">Last synced {new Date(form.google_synced_at).toLocaleString()}</p>
+              )}
+            </div>
+          )}
+
+          <Field label="Domain name" hint="We register or transfer it, run the SSL and renew it for you.">
             <input
               value={form.domain || ''}
               onChange={(e) => patch({ domain: e.target.value })}
               placeholder="yourshop.com"
-              className="mt-2 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-500"
+              className={inputCls}
             />
-            <p className="mt-1 text-xs text-stone-500">We register or transfer it, run the SSL and renew it for you.</p>
-          </div>
-          <div>
-            <label className="flex items-center gap-2 text-sm font-bold text-stone-900">
-              <MapPin className="h-4 w-4 text-amber-600" /> Google Business listing
-            </label>
-            <input
-              value={form.google_place_id || ''}
-              onChange={(e) => patch({ google_place_id: e.target.value })}
-              placeholder="Place ID or your Google profile link"
-              className="mt-2 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-500"
-            />
-            <p className="mt-1 text-xs text-stone-500">Hours, address and phone sync from here every hour — no double entry.</p>
-          </div>
-          <div className="flex items-start gap-3 rounded-xl border border-stone-200 p-4">
-            <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <div className="flex-1">
-              <p className="text-sm font-bold text-stone-900">Hiring form</p>
-              <p className="text-xs text-stone-500">Applications land in your dashboard instead of your inbox.</p>
-            </div>
-            <button
-              onClick={() => patch({ hiring_enabled: !form.hiring_enabled })}
-              role="switch"
-              aria-checked={form.hiring_enabled}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.hiring_enabled ? 'bg-emerald-600' : 'bg-stone-300'}`}
-            >
-              <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white transition-all ${form.hiring_enabled ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-
-            </button>
-          </div>
+          </Field>
         </div>
 
-        {/* Logo + photos */}
+        {/* Media */}
         <div className="space-y-4 rounded-2xl border border-stone-200 bg-white p-5">
           <p className="flex items-center gap-2 text-sm font-bold text-stone-900">
-            <ImageIcon className="h-4 w-4 text-amber-600" /> Logo &amp; dish photos
+            <ImageIcon className="h-4 w-4 text-amber-600" /> Media &amp; photos
           </p>
           <div className="flex items-center gap-4">
             {form.logo_url ? (
@@ -218,48 +346,108 @@ const WebsiteSettings: React.FC = () => {
           </div>
 
           <div>
-            <input ref={dishInput} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0], 'dish')} />
+            <input
+              ref={dishInput}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={(e) => upload(e.target.files?.[0], 'dish')}
+            />
             <button
               onClick={() => dishInput.current?.click()}
               disabled={uploading === 'dish'}
               className="inline-flex items-center gap-2 rounded-xl border border-stone-300 px-4 py-2 text-sm font-bold text-stone-700 hover:border-stone-400 disabled:opacity-50"
             >
               {uploading === 'dish' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Upload a dish photo
+              Add a dish or storefront photo
             </button>
-            {dishes.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {dishes.map((d) => (
-                  <img key={d} src={d} alt="Dish" className="h-16 w-16 rounded-lg border border-stone-200 object-cover" />
+            <p className="mt-2 text-xs text-stone-500">
+              Shoot it on the phone or tablet at the register — it lands in this grid and on the menu cards.
+            </p>
+            {form.photos.length > 0 && (
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {form.photos.map((p) => (
+                  <div key={p} className="group relative">
+                    <img src={p} alt="Shop" className="h-20 w-full rounded-lg border border-stone-200 object-cover" />
+                    <button
+                      onClick={() => patch({ photos: form.photos.filter((x) => x !== p) })}
+                      aria-label="Remove photo"
+                      className="absolute right-1 top-1 rounded-md bg-white/90 p-1 text-stone-600 opacity-0 transition group-hover:opacity-100 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
-            <p className="mt-2 text-xs text-stone-500">Photos upload straight to your shop storage and appear on the place cards.</p>
           </div>
-        </div>
 
-        {/* Socials */}
+          <Field label="About / story" hint="Two or three lines under the menu. Say it to the copilot and it writes here too.">
+            <textarea
+              value={form.story || ''}
+              onChange={(e) => patch({ story: e.target.value })}
+              rows={3}
+              placeholder="Family-run since 2016. Everything smoked in-house, biscuits rolled every morning."
+              className={inputCls}
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* Live menu & ordering — reads the POS catalog */}
+      <WebsiteMenuPanel menu={menu} orderingOn={form.ordering_enabled} domain={form.domain} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Social & contact */}
         <div className="space-y-3 rounded-2xl border border-stone-200 bg-white p-5">
           <p className="flex items-center gap-2 text-sm font-bold text-stone-900">
-            <Link2 className="h-4 w-4 text-amber-600" /> Social links
+            <Link2 className="h-4 w-4 text-amber-600" /> Social &amp; contact
           </p>
           {SOCIAL_FIELDS.map((f) => (
-            <div key={f.key}>
-              <label className="text-xs font-bold uppercase tracking-wide text-stone-500">{f.label}</label>
+            <Field key={f.key} label={f.label}>
               <input
                 value={(form.socials as any)?.[f.key] || ''}
                 onChange={(e) => patch({ socials: { ...form.socials, [f.key]: e.target.value } })}
                 placeholder={f.placeholder}
-                className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-sm outline-none focus:border-amber-500"
+                className={inputCls}
               />
-            </div>
+            </Field>
           ))}
+          <Field label="Phone shown on the page" hint="Click-to-call on a phone. Synced from Google, editable here.">
+            <input
+              value={form.phone || ''}
+              onChange={(e) => patch({ phone: e.target.value })}
+              placeholder="(828) 555-0134"
+              className={inputCls}
+            />
+          </Field>
+
+          <div className="space-y-2 pt-1">
+            {[
+              { on: form.inquiry_enabled, key: 'inquiry_enabled', icon: MessageSquare, title: 'Customer inquiry form', body: 'Catering, private events and questions land in your dashboard.' },
+              { on: form.ordering_enabled, key: 'ordering_enabled', icon: ShoppingBag, title: '0% commission online ordering', body: 'Same menu as the register, no third-party cut.' },
+              { on: form.hiring_enabled, key: 'hiring_enabled', icon: Briefcase, title: 'Hiring form', body: 'Applications land in your dashboard instead of your inbox.' },
+            ].map((row) => {
+              const Icon = row.icon;
+              return (
+                <div key={row.key} className="flex items-start gap-3 rounded-xl border border-stone-200 p-4">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-stone-900">{row.title}</p>
+                    <p className="text-xs text-stone-500">{row.body}</p>
+                  </div>
+                  <Toggle on={row.on} onChange={() => patch({ [row.key]: !row.on } as any)} label={row.title} />
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Sections */}
         <div className="rounded-2xl border border-stone-200 bg-white p-5">
           <p className="text-sm font-bold text-stone-900">Page sections</p>
-          <p className="text-xs text-stone-500">Everything on your one-page site. Switch off anything you do not want.</p>
+          <p className="text-xs text-stone-500">Everything on your one-page site, top to bottom. Switch off anything you do not want.</p>
           <ul className="mt-3 space-y-2">
             {SITE_SECTIONS.map((s) => {
               const on = form.section_order.includes(s.id);
@@ -269,15 +457,7 @@ const WebsiteSettings: React.FC = () => {
                     <p className="text-sm font-semibold text-stone-900">{s.title}</p>
                     <p className="truncate text-xs text-stone-500">{s.summary}</p>
                   </div>
-                  <button
-                    onClick={() => toggleSection(s.id)}
-                    role="switch"
-                    aria-checked={on}
-                    aria-label={`${on ? 'Hide' : 'Show'} ${s.title}`}
-                    className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-emerald-600' : 'bg-stone-300'}`}
-                  >
-                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                  </button>
+                  <Toggle on={on} onChange={() => toggleSection(s.id)} label={`${on ? 'Hide' : 'Show'} ${s.title}`} />
                 </li>
               );
             })}

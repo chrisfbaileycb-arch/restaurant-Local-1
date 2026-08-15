@@ -3,6 +3,7 @@ import {
   Sparkles, Send, Mic, MicOff, Ban, Percent, Users, Timer, FileCheck2, Loader2, Copy, Check,
   ChevronDown, Bot, ClipboardList, ChevronLeft, Pin, PinOff, History, MessageSquare,
   Globe, Clock, ImageIcon, ShoppingBag, Server, Package, Wallet, Truck, ChefHat, Receipt,
+  Printer, Download, CalendarDays, BarChart3, Megaphone,
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
@@ -15,16 +16,19 @@ import { useOps } from '@/lib/opsStore';
 import { runCommand, laborAudit } from '@/lib/copilotBrain';
 import { runAdvisor } from '@/lib/copilotAdvisor';
 import { saveCopilotMessage, loadCopilotHistory } from '@/lib/copilotHistory';
-import { loadSiteSettings, type SiteSettings } from '@/lib/siteSettings';
+import { printDocument, downloadDoc, type PrintDoc } from '@/lib/printDoc';
+import { loadSiteSettings, patchSiteSettings, type SiteSettings } from '@/lib/siteSettings';
 import { QUICK_ACTIONS, COPILOT_SUGGESTIONS, COPILOT_SKILLS, TODAY_SNAPSHOT } from '@/data/copilot';
 import { COPILOT_MODES, type CopilotModeId } from '@/data/copilotModes';
 import { DEVICE_KINDS, formatCents, type DeviceKindId } from '@/data/platform';
 import type { LoadedMenu } from '@/lib/menuStore';
 
+
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  Ban, Percent, Users, Timer, FileCheck2,
+  Ban, Percent, Users, Timer, FileCheck2, CalendarDays, BarChart3, Megaphone,
   Globe, Clock, ImageIcon, ShoppingBag, Server, Package, Wallet, Truck, ChefHat, Receipt,
 };
+
 
 /** A command pushed in from outside the drawer (hero buttons, terminal taps). */
 export interface CopilotSeed {
@@ -54,6 +58,7 @@ interface Msg {
   effects?: string[];
   payload?: any;
   kit?: { planId: string; name: string; who: string; note: string; handles: string[] };
+  doc?: PrintDoc;
   tone?: 'ok' | 'warn' | 'alert';
 }
 
@@ -65,30 +70,50 @@ const TONE_RING = {
   alert: 'border-red-400/35',
 };
 
-
-const PayloadBlock: React.FC<{ payload: any }> = ({ payload }) => {
-  const [copied, setCopied] = useState(false);
-  const json = JSON.stringify(payload, null, 2);
-  return (
-    <div className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-slate-950">
-      <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-1.5">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ledger handoff payload</span>
+/** A roster or report the operator can send to the printer or save. */
+const DocBlock: React.FC<{ doc: PrintDoc }> = ({ doc }) => (
+  <div className="mt-2 overflow-hidden rounded-lg border border-amber-300/25 bg-amber-400/5">
+    <div className="flex items-center justify-between gap-2 border-b border-amber-300/20 px-2.5 py-1.5">
+      <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-wider text-amber-300">
+        {doc.format === 'receipt' ? 'Kitchen printer document' : 'Printable report'}
+      </span>
+      <div className="flex shrink-0 items-center gap-2">
         <button
-          onClick={() => {
-            navigator.clipboard?.writeText(json);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1600);
-          }}
-          className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 hover:text-amber-200"
+          onClick={() => printDocument(doc)}
+          className="inline-flex items-center gap-1 rounded-md bg-amber-400 px-2 py-1 text-[10px] font-extrabold text-slate-900 hover:bg-amber-300"
         >
-          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-          {copied ? 'Copied' : 'Copy JSON'}
+          <Printer className="h-3 w-3" /> Print / PDF
+        </button>
+        <button
+          onClick={() => downloadDoc(doc)}
+          className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-200 hover:text-amber-100"
+        >
+          <Download className="h-3 w-3" /> CSV
         </button>
       </div>
-      <pre className="max-h-48 overflow-auto p-2.5 text-[10px] leading-relaxed text-emerald-300">{json}</pre>
     </div>
-  );
-};
+    <div className="max-h-44 overflow-auto px-2.5 py-2">
+      <p className="text-[11px] font-extrabold uppercase tracking-wide text-white">{doc.title}</p>
+      {doc.subtitle && <p className="text-[10px] text-slate-400">{doc.subtitle}</p>}
+      <div className="mt-1.5 space-y-0.5">
+        {doc.lines.slice(0, 14).map((l, i) =>
+          l === '---' ? (
+            <div key={i} className="my-1 border-t border-dashed border-white/15" />
+          ) : l.includes('\t') ? (
+            <div key={i} className="flex justify-between gap-3 text-[11px] text-slate-300">
+              <span className="truncate">{l.split('\t')[0]}</span>
+              <span className="shrink-0 font-bold text-white">{l.split('\t')[1]}</span>
+            </div>
+          ) : (
+            <p key={i} className="text-[11px] text-slate-300">{l}</p>
+          ),
+        )}
+        {doc.lines.length > 14 && <p className="text-[10px] text-slate-500">+{doc.lines.length - 14} more lines on the printout</p>}
+      </div>
+    </div>
+  </div>
+);
+
 
 const CopilotSidebar: React.FC<SidebarProps> = ({
   menu, seed, mode = 'floor', onCollapse, canPin, pinned, onTogglePin,
@@ -132,11 +157,12 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
         role: msg.role,
         text: msg.text,
         effects: msg.effects,
-        payload: msg.payload ?? (msg.kit ? { kit: msg.kit } : null),
+        payload: msg.payload ?? (msg.kit ? { kit: msg.kit } : msg.doc ? { doc: msg.doc } : null),
       });
     },
     [menu.shopId, user?.id, mode],
   );
+
 
   const push = useCallback(
     (msg: Omit<Msg, 'id'>) => {
@@ -164,9 +190,11 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
           role: r.role,
           text: r.text,
           effects: r.effects,
-          payload: r.payload && !r.payload.kit ? r.payload : undefined,
+          payload: r.payload && !r.payload.kit && !r.payload.doc ? r.payload : undefined,
           kit: r.payload?.kit,
+          doc: r.payload?.doc,
         })),
+
       ]);
     });
     return () => {
@@ -261,11 +289,32 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
         effects: result.effects,
         payload: result.payload,
         kit: result.kit,
+        doc: result.doc,
         tone: result.tone,
       });
+
+      // Web & brand engine: write the change into the shop's saved settings.
+      if (result.siteWrite) {
+        if (menu.shopId) {
+          try {
+            const next = await patchSiteSettings(menu.shopId, result.siteWrite);
+            setSite(next);
+          } catch (e: any) {
+            push({ role: 'system', tone: 'warn', text: `I could not save that to your website settings: ${e?.message || 'write failed'}` });
+          }
+        } else {
+          push({
+            role: 'system',
+            tone: 'warn',
+            text: 'That is a demo shop, so nothing was saved. Build your store first and every website change I make sticks.',
+          });
+        }
+      }
+
       setBusy(false);
       return;
     }
+
 
     // Open-ended question — hand it to the model with live shop context.
     const { laborCost, pct, overtime } = laborAudit();
@@ -507,7 +556,9 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
               {m.kit && <CopilotKitCard kit={m.kit} />}
+              {m.doc && <DocBlock doc={m.doc} />}
               {m.payload && <PayloadBlock payload={m.payload} />}
+
             </div>
           ),
         )}

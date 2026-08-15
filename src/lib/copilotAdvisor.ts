@@ -85,6 +85,112 @@ export const runAdvisor = (raw: string, menu: LoadedMenu, site?: SiteSettings | 
   const t = raw.trim().toLowerCase();
   if (!t) return { reply: '', unhandled: true };
 
+  // ---------------- Web & brand engine (writes shop_site_settings) ----------------
+
+  // Announcement banner: "post a banner about our Friday fish fry"
+  if (/(banner|announcement|alert strip|top of (the )?page|broadcast)/.test(t)) {
+    if (/(take down|remove|clear|turn off|kill|delete)/.test(t)) {
+      return {
+        reply: `Banner cleared. The strip at the top of ${site?.domain || 'your page'} is gone on the next page load — the menu and ordering did not move.`,
+        siteWrite: { announcement: null, announcement_on: false },
+        effects: ['Banner off', 'Live now'],
+        tone: 'ok',
+      };
+    }
+    const m = raw.match(/(?:banner|announcement|message|alert|post|say|about|that)\s+(?:about\s+|saying\s+|that\s+)?["“']?([^"”']{6,140})["”']?\s*$/i);
+    const message = (m?.[1] || raw.replace(/^(post|put up|add|run|show|set)\s+(a\s+)?(banner|announcement)\s*(about|saying|that)?\s*/i, '')).trim();
+    const text = message.replace(/\s+/g, ' ').replace(/^our\s+/i, 'Our ');
+    const headline = text.charAt(0).toUpperCase() + text.slice(1);
+    return {
+      reply: [
+        `Banner is live: “${headline}”`,
+        '',
+        `It sits above the hero on ${site?.domain || 'your one-page site'}, on the online ordering header and on the ordering confirmation screen. Guests see it before they see anything else.`,
+        'Say "take the banner down" whenever it is over, or type a new one and it replaces this.',
+      ].join('\n'),
+      siteWrite: { announcement: headline, announcement_on: true },
+      effects: ['Banner live', 'Top of page', 'Saved'],
+      tone: 'ok',
+    };
+  }
+
+  // Holiday / special hours: "update my website hours for Labor Day"
+  if (/(hours?)/.test(t) && /(update|change|set|holiday|closed|close early|open late|labor day|thanksgiving|christmas|new year|memorial|july 4|fourth of july|easter)/.test(t)) {
+    const note = raw.replace(/^(update|change|set|please)\s+(my\s+)?(website\s+)?hours\s*/i, '').trim();
+    const holiday = note.replace(/^(for|on|to)\s+/i, '');
+    const label = holiday ? holiday.charAt(0).toUpperCase() + holiday.slice(1) : 'the holiday';
+    return {
+      reply: [
+        `Holiday hours saved: ${label}.`,
+        '',
+        site?.google_place_id
+          ? `Your weekly hours still come from Google (${site.google_place_id}) — I left those alone and posted this as the exception line so guests see it above the regular schedule.`
+          : 'Your Google Business listing is not linked yet, so this is a typed exception. Link the listing in Dashboard → Website and the weekly hours keep themselves current.',
+        site?.hours?.length ? `Regular week on file:\n${site.hours.map((h) => `• ${h}`).join('\n')}` : 'No weekly hours are saved yet — run the Google sync and they fill in automatically.',
+      ].join('\n'),
+      siteWrite: { holiday_note: label },
+      effects: ['Hours exception saved', site?.google_place_id ? 'Google linked' : 'Listing needed'],
+      tone: site?.google_place_id ? 'ok' : 'warn',
+    };
+  }
+
+  // Social links: "add my instagram instagram.com/shop"
+  const social = raw.match(/(instagram|facebook|tiktok|yelp)[^a-z0-9]*((?:https?:\/\/)?[a-z0-9._\-/@]+\.[a-z]{2,}[^\s]*)/i);
+  if (social && /(add|set|link|connect|update|my)/.test(t)) {
+    const key = social[1].toLowerCase() as 'instagram' | 'facebook' | 'tiktok' | 'yelp';
+    const url = social[2];
+    return {
+      reply: `${social[1][0].toUpperCase()}${social[1].slice(1)} saved: ${url}. It shows in the contact strip at the bottom of the page and on the order confirmation screen.`,
+      siteWrite: { socials: { ...(site?.socials || {}), [key]: url } },
+      effects: [`${key} linked`, 'Contact strip'],
+      tone: 'ok',
+    };
+  }
+
+  // Domain: "my domain is smithsdiner.com"
+  const domain = raw.match(/\b([a-z0-9][a-z0-9-]{1,62}\.(?:com|net|org|co|shop|cafe|kitchen|food|us|biz))\b/i);
+  if (domain && /(domain|url|web address|site is|register|point)/.test(t)) {
+    return {
+      reply: `Domain saved: ${domain[1]}. We register or transfer it, run the SSL and renew it — nothing for you to log into. It goes live the moment you approve the page.`,
+      siteWrite: { domain: domain[1].toLowerCase() },
+      effects: [domain[1].toLowerCase(), 'SSL + renewals ours'],
+      tone: 'ok',
+    };
+  }
+
+  // Story / about copy
+  if (/(about|story|bio|hero copy|tagline|describe (us|my shop))/.test(t) && /(write|update|change|set|add|post)/.test(t)) {
+    const story = raw.replace(/^(write|update|change|set|add|post)\s+(my|our|the)?\s*(about|story|bio|hero copy|tagline)\s*(section|text|copy)?\s*(to|saying|about)?\s*/i, '').trim();
+    if (story.length > 12) {
+      return {
+        reply: `About section updated:\n\n“${story}”\n\nIt sits under the menu with your photo grid. Change it any time — it is one line of text, not a web project.`,
+        siteWrite: { story },
+        effects: ['About saved', 'Live on the page'],
+        tone: 'ok',
+      };
+    }
+  }
+
+  // Online ordering / inquiry form / hiring switches
+  if (/(turn|switch)\s+(on|off)/.test(t) && /(ordering|order online|inquiry|contact form|message form|hiring|application)/.test(t)) {
+    const on = /turn on|switch on/.test(t);
+    const which = /(inquiry|contact|message)/.test(t) ? 'inquiry' : /(hiring|application)/.test(t) ? 'hiring' : 'ordering';
+    const patch =
+      which === 'inquiry'
+        ? { inquiry_enabled: on }
+        : which === 'hiring'
+        ? { hiring_enabled: on }
+        : { ordering_enabled: on };
+    const label = which === 'inquiry' ? 'Customer inquiry form' : which === 'hiring' ? 'Hiring form' : '0% commission online ordering';
+    return {
+      reply: `${label} is now ${on ? 'ON' : 'OFF'}. Saved to your website settings — the page rebuilds itself, nothing to redeploy.`,
+      siteWrite: patch,
+      effects: [`${label} ${on ? 'on' : 'off'}`],
+      tone: 'ok',
+    };
+  }
+
+
   // ---------------- Equipment ----------------
   if (/(recommend|spec|what).*(equipment|hardware|gear|kit)|equipment for|gear for|hardware for|what do i need to (open|start)|cheapest way to open|budget kit|starter kit|build (me )?a kit|add the kit/.test(t)) {
     return gearReply(t, menu);

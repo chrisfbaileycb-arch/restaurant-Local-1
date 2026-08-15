@@ -7,6 +7,11 @@ import { opsApi, key } from '@/lib/opsStore';
 import { formatCents } from '@/data/platform';
 import { computeTax } from '@/lib/taxEngine';
 import type { LoadedMenu } from '@/lib/menuStore';
+import type { PrintDoc } from '@/lib/printDoc';
+import type { SiteSettings } from '@/lib/siteSettings';
+import {
+  marginReprice, buildSchedule, foodCostVariance, pmixReport, hourlyLaborReport, zReport,
+} from '@/lib/copilotSkills';
 
 // ------------------------------------------------------------
 // The copilot's deterministic skill layer. Anything that changes real
@@ -21,6 +26,10 @@ export interface CopilotResult {
   effects?: string[];
   /** Structured payload (daily close) rendered as JSON. */
   payload?: any;
+  /** A printable roster / report — print to the kitchen printer or save as PDF. */
+  doc?: PrintDoc;
+  /** Fields the copilot is writing into the shop's saved website settings. */
+  siteWrite?: Partial<Omit<SiteSettings, 'shop_id'>>;
   /** A buildable hardware kit rendered as real, priced product cards. */
   kit?: {
     planId: string;
@@ -33,6 +42,7 @@ export interface CopilotResult {
   unhandled?: boolean;
   tone?: 'ok' | 'warn' | 'alert';
 }
+
 
 
 const money = (c: number) => formatCents(c);
@@ -159,6 +169,39 @@ export const runCommand = (raw: string, menu: LoadedMenu): CopilotResult => {
   const text = raw.trim();
   const t = text.toLowerCase();
   if (!t) return { reply: '', unhandled: true };
+
+  // ============ Membership skill engines ============
+  // These run before the single-item commands so a phrase like
+  // "reprice breakfast to 68% margin" is never read as one price change.
+
+  // 1. Menu & margin ops — food cost repricing
+  if (
+    /(margin|food ?cost|plate cost|reprice|re-price|repricing|recalculate|cost (jumped|went up|rose|is up|increase|spiked)|price increase from)/.test(t) &&
+    !/(variance|waste|report on)/.test(t)
+  ) {
+    return marginReprice(text, menu);
+  }
+
+  // 3. Reports & audits
+  if (/(food cost variance|variance report|waste report|how much waste)/.test(t)) return foodCostVariance(menu);
+  if (/(pmix|product mix|item velocity|best ?sell|top sellers|sales categor|category summary|category mix)/.test(t)) {
+    return pmixReport(menu);
+  }
+  if (/(hourly labor|labor by hour|labor percentage|labor %|labour percent)/.test(t)) return hourlyLaborReport(menu);
+  if (/(z-?report|z close|zed report|end of day report|drawer count)/.test(t)) {
+    const payload = buildClosePayload(menu);
+    opsApi.saveClose(payload);
+    return zReport(menu, payload);
+  }
+
+  // 2. Schedule & labor — weekly build + printable roster
+  if (
+    /(build|generate|make|create|draft|write|print|post)\b[\s\S]*\b(schedule|shifts?|roster|rota)/.test(t) ||
+    /(next week'?s (floor |staff )?schedule|weekly schedule|shift template|staff the week)/.test(t)
+  ) {
+    return buildSchedule(text, menu);
+  }
+
 
   // --- restore / un-86 ---
   const un86 = t.match(/(?:un-?86|restore|bring back|put back|back on)\s+(?:the\s+)?(.+)/);
