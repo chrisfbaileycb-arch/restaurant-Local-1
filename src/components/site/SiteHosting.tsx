@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Globe, ShoppingBag, Clock, MapPin, ClipboardList, Share2, ImageIcon,
-  RefreshCw, Check, ArrowRight, Phone, Instagram, Facebook, Star, Camera,
+  RefreshCw, Check, ArrowRight, Phone, Instagram, Facebook, Star, Camera, Bot,
 } from 'lucide-react';
 
 import Reveal from '@/components/site/Reveal';
+import { askCopilot } from '@/components/site/CopilotDock';
 import { BRAND, SITE_BLOCKS, DEMO_HOURS, SOCIAL_LINKS } from '@/data/platform';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
 import type { LoadedMenu } from '@/lib/menuStore';
@@ -292,13 +293,22 @@ const SiteHosting: React.FC = () => {
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/onboarding"
-                className="mt-4 inline-flex items-center gap-2 text-sm font-extrabold text-orange-600 hover:text-orange-700"
-              >
-                Get this page built for me <ArrowRight className="h-4 w-4 animate-bob-x" />
-              </Link>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => askCopilot('Build my website page')}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-4 py-2.5 text-sm font-extrabold text-white shadow"
+                >
+                  <Bot className="h-4 w-4" /> Have the copilot design my page
+                </button>
+                <Link
+                  to="/onboarding"
+                  className="inline-flex items-center gap-2 text-sm font-extrabold text-orange-600 hover:text-orange-700"
+                >
+                  Get this page built for me <ArrowRight className="h-4 w-4 animate-bob-x" />
+                </Link>
+              </div>
             </div>
+
           </div>
         </div>
       </div>

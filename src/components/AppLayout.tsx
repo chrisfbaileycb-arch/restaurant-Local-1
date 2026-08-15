@@ -85,6 +85,15 @@ const AppLayout: React.FC = () => {
     }
   }, []);
 
+  // Any button on the page (including the website-hosting section) can call
+  // the copilot with askCopilot(command) — same event the other pages use.
+  useEffect(() => {
+    const handler = (e: Event) => demoCopilot((e as CustomEvent)?.detail?.command);
+    window.addEventListener('lle:copilot', handler as EventListener);
+    return () => window.removeEventListener('lle:copilot', handler as EventListener);
+  }, [demoCopilot]);
+
+
   useEffect(() => {
     supabase
       .from('ecom_products')
@@ -133,6 +142,7 @@ const AppLayout: React.FC = () => {
     >
       <CopilotWorkspace
         menu={liveMenu}
+        mode="floor"
         open={copilotOpen}
         onOpenChange={setCopilotOpen}
         pinned={pinned}
@@ -140,6 +150,7 @@ const AppLayout: React.FC = () => {
         canPin={!!user}
         seed={seed}
       />
+
       <Header />
 
       {/* ---------------- HERO ---------------- */}

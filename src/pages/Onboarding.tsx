@@ -2,15 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Upload, FileText, Check, Loader2, Monitor, Globe, ShoppingBag, Gift, ArrowRight, ArrowLeft, Sparkles,
-  AlertTriangle, Database,
+  AlertTriangle, Database, Bot, Package,
 } from 'lucide-react';
 import PageShell from '@/components/site/PageShell';
 import SignupForm from '@/components/site/SignupForm';
+import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
 import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents, PLANS, SETUP_FEE, HOSTING_DISCOUNT } from '@/data/platform';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { parseMenuFile, parseMenuText, saveParsedMenu, loadShopMenu } from '@/lib/menuStore';
 import type { ParsedMenu } from '@/lib/menuStore';
+
 
 const SAMPLE_MENU_TEXT = `NORTH BEND COFFEE & KITCHEN
 BREAKFAST
@@ -153,6 +155,9 @@ const Onboarding: React.FC = () => {
 
   return (
     <PageShell>
+      {/* Build copilot: helps lay out the site, wire ordering and pick gear */}
+      <CopilotDock mode="website" />
+
       <div className="relative overflow-hidden border-b border-orange-100 bg-gradient-to-br from-fuchsia-50 via-white to-amber-50">
         <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 animate-blob rounded-full bg-fuchsia-300/30 blur-3xl" />
         <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -165,6 +170,28 @@ const Onboarding: React.FC = () => {
           <p className="mt-2 max-w-2xl text-slate-600">
             Four steps. Your real menu becomes a POS layout, an ordering site, a one-page website and a rewards program.
           </p>
+
+          {/* Copilot help right where the work happens */}
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              onClick={() => askCopilot('Build my website page')}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white shadow"
+            >
+              <Bot className="h-4 w-4" /> Help me build this
+            </button>
+            <button
+              onClick={() => askCopilot('What do you still need from me?')}
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-bold text-stone-700 hover:bg-stone-50"
+            >
+              What do you need from me?
+            </button>
+            <button
+              onClick={() => askCopilot(type ? `Recommend equipment for a ${type.replace('-', ' ')}` : 'Recommend equipment for my shop')}
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-bold text-stone-700 hover:bg-stone-50"
+            >
+              <Package className="h-4 w-4" /> Pick my equipment
+            </button>
+          </div>
 
           <div className="mt-6 h-2 w-full overflow-hidden rounded-full bg-white shadow-inner">
             <div

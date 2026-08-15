@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Smartphone, Tablet, Printer, Wallet, ShieldCheck, Truck, ArrowRight } from 'lucide-react';
+import { Smartphone, Tablet, Printer, Wallet, ShieldCheck, Truck, ArrowRight, Bot } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import PageShell from '@/components/site/PageShell';
 import BudgetBuilder from '@/components/site/BudgetBuilder';
 import ProductCard from '@/components/ProductCard';
+import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
 import { BUDGET_TAG, formatCents, SETUP_FEE, PLANS } from '@/data/platform';
+
 
 
 const PROMISES = [
@@ -74,6 +76,9 @@ const StarterKit: React.FC = () => {
 
   return (
     <PageShell>
+      {/* Gear copilot: specs a kit to your concept and budget */}
+      <CopilotDock mode="equipment" />
+
       {/* Hero */}
       <section className="border-b border-stone-200 bg-gradient-to-br from-stone-900 via-stone-900 to-stone-800 text-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
@@ -95,6 +100,12 @@ const StarterKit: React.FC = () => {
             >
               Build my kit <ArrowRight className="h-4 w-4" />
             </a>
+            <button
+              onClick={() => askCopilot('Recommend equipment for my shop')}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 font-bold text-white transition hover:scale-[1.03]"
+            >
+              <Bot className="h-4 w-4" /> Let the copilot spec it
+            </button>
             <Link
               to="/collections/budget-starter"
               className="rounded-xl border border-stone-600 px-6 py-3 font-semibold text-white transition hover:bg-stone-800"
@@ -102,6 +113,7 @@ const StarterKit: React.FC = () => {
               Browse all budget gear
             </Link>
           </div>
+
           <div className="mt-8 flex flex-wrap gap-6 text-sm text-stone-300">
             <span className="inline-flex items-center gap-2">
               <Truck className="h-4 w-4 text-emerald-400" /> Free shipping on everything

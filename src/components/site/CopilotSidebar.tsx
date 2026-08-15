@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Sparkles, Send, Mic, MicOff, Ban, Percent, Users, Timer, FileCheck2, Loader2, Copy, Check,
   ChevronDown, Bot, ClipboardList, ChevronLeft, Pin, PinOff,
+  Globe, Clock, ImageIcon, ShoppingBag, Server, Package, Wallet, Truck, ChefHat, Receipt,
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
@@ -9,12 +10,15 @@ import CopilotSentinel from '@/components/site/CopilotSentinel';
 import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import { useOps } from '@/lib/opsStore';
 import { runCommand, laborAudit } from '@/lib/copilotBrain';
+import { runAdvisor } from '@/lib/copilotAdvisor';
 import { QUICK_ACTIONS, COPILOT_SUGGESTIONS, COPILOT_SKILLS, TODAY_SNAPSHOT } from '@/data/copilot';
+import { COPILOT_MODES, type CopilotModeId } from '@/data/copilotModes';
 import { DEVICE_KINDS, formatCents, type DeviceKindId } from '@/data/platform';
 import type { LoadedMenu } from '@/lib/menuStore';
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Ban, Percent, Users, Timer, FileCheck2,
+  Globe, Clock, ImageIcon, ShoppingBag, Server, Package, Wallet, Truck, ChefHat, Receipt,
 };
 
 /** A command pushed in from outside the drawer (hero buttons, terminal taps). */
@@ -27,6 +31,8 @@ export interface CopilotSeed {
 interface SidebarProps {
   menu: LoadedMenu;
   seed?: CopilotSeed | null;
+  /** which hat the copilot is wearing on this page */
+  mode?: CopilotModeId;
   /** slide the drawer away */
   onCollapse?: () => void;
   /** pinning is only offered to signed-in operators */
@@ -53,6 +59,7 @@ const TONE_RING = {
   alert: 'border-red-400/35',
 };
 
+
 const PayloadBlock: React.FC<{ payload: any }> = ({ payload }) => {
   const [copied, setCopied] = useState(false);
   const json = JSON.stringify(payload, null, 2);
@@ -78,9 +85,11 @@ const PayloadBlock: React.FC<{ payload: any }> = ({ payload }) => {
 };
 
 const CopilotSidebar: React.FC<SidebarProps> = ({
-  menu, seed, onCollapse, canPin, pinned, onTogglePin,
+  menu, seed, mode = 'floor', onCollapse, canPin, pinned, onTogglePin,
 }) => {
   const ops = useOps();
+  const cfg = COPILOT_MODES[mode] || COPILOT_MODES.floor;
+  const isFloor = mode === 'floor';
   const { verifyOne, devices, simulateDrop } = useDeviceHealth();
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -89,15 +98,21 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
   const streamRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  // Each surface gets its own quick actions and prompts.
+  const quickActions = isFloor ? QUICK_ACTIONS : cfg.quickActions;
+  const suggestions = isFloor ? COPILOT_SUGGESTIONS : cfg.suggestions;
 
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: 'welcome',
       role: 'agent',
       tone: 'ok',
-      text: `Copilot online for ${menu.isDemo ? 'the demo shop' : menu.shopName}. ${menu.items.length} items loaded, ${TODAY_SNAPSHOT.ticketCount} tickets rung today. Tell me what changed on the floor and I will push it to the register, the online cart and your website together.`,
+      text: isFloor
+        ? `Copilot online for ${menu.isDemo ? 'the demo shop' : menu.shopName}. ${menu.items.length} items loaded, ${TODAY_SNAPSHOT.ticketCount} tickets rung today. Tell me what changed on the floor and I will push it to the register, the online cart and your website together.`
+        : cfg.greeting,
     },
   ]);
+
 
   const push = useCallback((msg: Omit<Msg, 'id'>) => {
     setMessages((m) => [...m, { ...msg, id: uid() }]);
@@ -153,7 +168,10 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
     setInput('');
     setBusy(true);
 
-    const result = runCommand(text, menu);
+    // On the build surfaces the advisor answers first (store build, gear),
+    // then the floor commands. On the register it is the other way round.
+    const first = isFloor ? runCommand(text, menu) : runAdvisor(text, menu);
+    const result = first.unhandled ? (isFloor ? runAdvisor(text, menu) : runCommand(text, menu)) : first;
 
     if (result.effects?.[0] === '__hardware__') {
       const target = (['receipt-printer', 'kitchen-printer', 'cash-drawer', 'card-reader'] as DeviceKindId[]).find((id) =>
@@ -256,7 +274,7 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
-            Watching the floor · {menu.isDemo ? 'demo shop' : menu.shopName}
+            {cfg.role} · {menu.isDemo ? 'demo shop' : menu.shopName}
           </p>
         </div>
 
@@ -291,7 +309,7 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
       <div className="border-b border-white/10 px-3 py-2.5">
         <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Quick actions</p>
         <div className="flex flex-wrap gap-1.5">
-          {QUICK_ACTIONS.map((a) => {
+          {quickActions.map((a) => {
             const Icon = ICONS[a.icon] || Sparkles;
             const instant = a.id !== 'eighty-six';
             return (
@@ -307,6 +325,7 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
           })}
         </div>
       </div>
+
 
       {/* Live state chips */}
       {(ops.eightySixed.length > 0 || ops.promos.length > 0 || Object.keys(ops.priceOverrides).length > 0) && (
@@ -397,7 +416,7 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
 
       {/* Suggestions */}
       <div className="flex gap-1.5 overflow-x-auto border-t border-white/10 px-3 py-2">
-        {COPILOT_SUGGESTIONS.slice(0, 5).map((s) => (
+        {suggestions.slice(0, 6).map((s) => (
           <button
             key={s}
             onClick={() => send(s)}
@@ -407,6 +426,7 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
           </button>
         ))}
       </div>
+
 
       {/* Composer */}
       <form

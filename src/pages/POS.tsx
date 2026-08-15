@@ -6,6 +6,7 @@ import {
 import PageShell from '@/components/site/PageShell';
 import DeviceBar from '@/components/site/DeviceBar';
 import HealthBanner from '@/components/site/HealthBanner';
+import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
 
 import type { MenuItem } from '@/data/menu';
 import { formatCents, formatTaxRate } from '@/data/platform';
@@ -129,6 +130,9 @@ const POS: React.FC = () => {
 
   return (
     <PageShell>
+      {/* Copilot on the register: 86s, splits, comps, close and hardware pings */}
+      <CopilotDock mode="floor" menu={loaded} />
+
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -140,6 +144,12 @@ const POS: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => askCopilot()}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white shadow"
+            >
+              <Bot className="h-4 w-4" /> Ask the copilot
+            </button>
             <button
               onClick={() => setOnline((o) => !o)}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
@@ -159,6 +169,7 @@ const POS: React.FC = () => {
             )}
           </div>
         </div>
+
 
         {loaded.isDemo && !loading && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
