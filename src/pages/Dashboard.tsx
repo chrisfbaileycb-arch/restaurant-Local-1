@@ -15,7 +15,9 @@ import TaxJurisdictions from '@/components/site/TaxJurisdictions';
 import ItemTaxClasses from '@/components/site/ItemTaxClasses';
 import PayrollTaxSetting from '@/components/site/PayrollTaxSetting';
 import WebsiteSettings from '@/components/site/WebsiteSettings';
+import BuildStatus from '@/components/site/BuildStatus';
 import CopilotDock from '@/components/site/CopilotDock';
+
 
 import { useDeviceHealth, sinceLabel } from '@/hooks/useDeviceHealth';
 
@@ -135,8 +137,14 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+        {/* Where this shop's build sits, milestone by milestone. */}
+        <BuildStatus />
+      </div>
+
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {tab === 'stations' && (
+
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {kpi('Devices paired', String(devices.length), 'Across this location', Plug)}

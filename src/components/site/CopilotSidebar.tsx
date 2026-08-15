@@ -10,6 +10,8 @@ import { supabase } from '@/lib/supabase';
 import CopilotSentinel from '@/components/site/CopilotSentinel';
 import CopilotKitCard from '@/components/site/CopilotKitCard';
 import CopilotHistory from '@/components/site/CopilotHistory';
+import BuildStatus from '@/components/site/BuildStatus';
+
 import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOps } from '@/lib/opsStore';
@@ -472,6 +474,12 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
           })}
         </div>
       </div>
+
+      {/* Build status — the agent console view of where this build sits */}
+      <div className="border-b border-white/10 px-3 py-2.5">
+        <BuildStatus tone="dark" />
+      </div>
+
 
 
       {/* Live state chips */}

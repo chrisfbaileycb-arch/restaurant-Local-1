@@ -25,7 +25,8 @@ import ZeroHardware from '@/components/site/ZeroHardware';
 import {
   BRAND, HERO_IMAGE, FEATURES, STATS, BUSINESS_TYPES, LAUNCH_STEPS, REPORTS,
   REWARD_PROGRAMS, PROCESSORS, PARTNER_SERVICES, TESTIMONIALS,
-  SETUP_FEE, PLANS, calcProcessingCost, formatMoney,
+  SETUP_DEPOSIT, PLANS, calcProcessingCost, formatMoney,
+
 } from '@/data/platform';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -706,9 +707,10 @@ const AppLayout: React.FC = () => {
                 </Link>
               ))}
               <p className="text-center text-xs text-slate-500">
-                Software is ${PLANS[1].price}/mo (${PLANS[0].price} with website hosting) · ${SETUP_FEE} one-time setup ·
-                free shipping · no contract.
+                Software is ${PLANS[1].price}/mo (${PLANS[0].price} with website hosting) · ${SETUP_DEPOSIT} deposit to
+                start, balance only at delivery · free shipping · no contract.
               </p>
+
 
             </div>
           </Reveal>

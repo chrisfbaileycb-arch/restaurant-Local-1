@@ -209,17 +209,27 @@ export const calcProcessingCost = (p: Processor, monthlyVolume: number, avgTicke
 
 // ---------------- Software plans ----------------
 // Two tiers. Run it on the gear you already own — no dongles, no lock-in.
+// The setup fee is split into two Stripe invoices so nobody ever needs a refund:
+// a $100 deposit at signup, then the balance only when the operator approves the build.
 export interface Plan {
   id: string;
   name: string;
   price: number;
-  /** one-time build fee for this tier */
+  /** total one-time build fee for this tier (deposit + balance) */
   setup: number;
+  /** charged at signup — kickstarts AI menu parsing and the build */
+  deposit: number;
+  /** charged only on approval / delivery */
+  balance: number;
+  /** the exact line shown on the pricing card */
+  setupDisplay: string;
   per: string;
   blurb: string;
   features: string[];
   cta: string;
   badge?: string;
+  /** small savings note under the price */
+  saveNote?: string;
   highlight?: boolean;
   hosting: boolean;
 }
@@ -228,23 +238,27 @@ export const PRICING_HEADLINE = 'One Simple Price. Zero Hardware Lock-In.';
 export const PRICING_SUBHEAD =
   'Run it on the gear you already own today — iPad, Android tablet, iPhone, or laptop. No dongles, no proprietary junk.';
 
+/** Every tier starts with the same deposit. Single source of truth. */
+export const SETUP_DEPOSIT = 100;
+
 export const PLANS: Plan[] = [
   {
     id: 'pos-web',
-    name: 'POS + Website (The Full Engine)',
+    name: 'POS + Website',
     price: 149,
     setup: 299,
+    deposit: SETUP_DEPOSIT,
+    balance: 199,
+    setupDisplay: '$299 Total Setup ($100 to start → $199 upon delivery)',
     per: '/mo per location',
-    blurb: 'The complete system: POS, live website, and online ordering built from one vibe-coded setup.',
+    blurb: 'The Complete Engine: POS, live website, and online ordering built from one vibe-coded setup.',
     hosting: true,
     badge: '★ MOST POPULAR ★',
     features: [
-      'Everything in POS Only',
-      'Auto-generated one-page website',
-      '0% commission online ordering',
-      'Google Business & SEO sync',
-      'Custom domain, SSL and hosting included',
-      '24/7 Copilot web edits',
+      'POS terminal engine, tap-to-pay & camera card scan',
+      'Auto-generated single-page website & custom domain hosting',
+      '0% commission online ordering with Google Business sync',
+      '24/7 AI Floor Copilot for menu, schedule & live site updates',
     ],
     cta: 'Start my build',
     highlight: true,
@@ -253,23 +267,27 @@ export const PLANS: Plan[] = [
     id: 'pos-only',
     name: 'POS Only',
     price: 99,
-    setup: 199,
+    setup: 249,
+    deposit: SETUP_DEPOSIT,
+    balance: 149,
+    setupDisplay: '$249 Total Setup ($50 Discount | $100 to start → $149 upon delivery)',
     per: '/mo per location',
     blurb: 'For operators who already have a website and just need a lean, contract-free POS.',
     hosting: false,
+    saveNote: 'Save $50/mo vs the Full Engine',
     features: [
-      'Unlimited stations, tablets & phones',
-      'Offline queue & cellular failover',
-      'Kitchen and bar tickets',
-      '12 financial reports',
+      'Complete POS terminal engine & offline failover',
+      'All 12 automated financial reports & schedule tools',
       '24/7 AI Floor Copilot',
-      'Tap-to-Pay & Camera card scanning',
+      'Connects to your existing external website',
     ],
     cta: 'Start my build',
   },
 ];
 
-/** Legacy alias — the entry-tier build fee. Prefer plan.setup. */
+export const planById = (id: string) => PLANS.find((p) => p.id === id) || PLANS[0];
+
+/** Legacy alias — the entry-tier total build fee. Prefer plan.setup / plan.deposit. */
 export const SETUP_FEE = PLANS[1].setup;
 export const HOSTING_DISCOUNT = PLANS[0].price - PLANS[1].price;
 
@@ -286,14 +304,14 @@ export const PREPAY_OPTIONS: PrepayOption[] = [
   {
     id: 'six',
     label: 'Prepay 6 Months',
-    detail: 'Get 1 Month Free',
+    detail: '1 Month Free',
     months: 6,
     freeMonths: 1,
   },
   {
     id: 'year',
     label: 'Prepay 1 Year',
-    detail: 'Get 2 Months Free',
+    detail: '2 Months Free',
     months: 12,
     freeMonths: 2,
   },
@@ -305,13 +323,91 @@ export const prepayEffective = (monthly: number, o: PrepayOption) =>
 
 export const prepayTotal = (monthly: number, o: PrepayOption) => monthly * (o.months - o.freeMonths);
 
-// How billing actually works — no monthly charge until the build is live.
+// How billing actually works — deposit now, balance only on approval, monthly at go-live.
 export const BILLING_STEPS = [
-  { id: 1, title: 'Pay the one-time setup', body: '$199 for POS Only, $299 for the Full Engine — menu parsing, POS build and your site.', note: 'Due at signup' },
+  {
+    id: 1,
+    title: 'Start with a $100 deposit',
+    body: 'Start with $100 deposit today → Pay remaining balance only when you approve the build and go live.',
+    note: '$100 due today',
+  },
   { id: 2, title: 'We build it', body: 'Take a week or take two months — you tell us when you are ready to open.', note: '$0 while you build' },
   { id: 3, title: 'You approve the build', body: 'Walk the POS, the ordering page and the website. Change anything.', note: 'Still $0' },
-  { id: 4, title: 'Go live — billing starts', body: 'The first monthly charge lands the day you take your first real order.', note: '$99 or $149/mo' },
+  {
+    id: 4,
+    title: 'Balance settles, you go live',
+    body: 'The setup balance is invoiced at delivery and the monthly starts the day you take your first real order.',
+    note: '$199 or $149 balance',
+  },
 ];
+
+// ============================================================
+// Build status tracker — the operator (and the agent console)
+// can see exactly where a build sits, milestone by milestone.
+// ============================================================
+
+export type BuildStageStatus = 'done' | 'active' | 'pending' | 'bypassed';
+
+export interface BuildStage {
+  id: number;
+  key: string;
+  title: string;
+  detail: string;
+  /** label shown when the stage is complete vs still running */
+  doneLabel: string;
+  activeLabel: string;
+  /** skipped entirely when the operator picked POS Only */
+  websiteOnly?: boolean;
+  /** the milestone that triggers the setup balance invoice */
+  billing?: boolean;
+}
+
+export const BUILD_STAGES: BuildStage[] = [
+  {
+    id: 1,
+    key: 'menu',
+    title: 'Menu Parsing & AI Vibe Ingestion',
+    detail: 'Your menu photo, PDF or link is parsed into items, prices, sizes and modifiers.',
+    doneLabel: 'Completed',
+    activeLabel: 'Processing',
+  },
+  {
+    id: 2,
+    key: 'stations',
+    title: 'POS Station & Terminal Mapping',
+    detail: 'Categories routed to kitchen, bar and runner. Tap-to-pay and camera scan armed on every device.',
+    doneLabel: 'Ready',
+    activeLabel: 'In Progress',
+  },
+  {
+    id: 3,
+    key: 'website',
+    title: 'Single-Page Website Generation & Google Place Sync',
+    detail: 'One-page site built from the POS catalog, with hours, address and phone pulled from Google Business.',
+    doneLabel: 'Delivered',
+    activeLabel: 'Generating',
+    websiteOnly: true,
+  },
+  {
+    id: 4,
+    key: 'domain',
+    title: 'Custom Domain & Live Ordering Deployment',
+    detail: 'Domain pointed, SSL issued and 0% commission online ordering switched on.',
+    doneLabel: 'Live',
+    activeLabel: 'Pending Approval',
+    websiteOnly: true,
+  },
+  {
+    id: 5,
+    key: 'balance',
+    title: 'Final Balance Settlement & Launch',
+    detail: 'The setup balance invoices only after you approve delivery. Then the doors open.',
+    doneLabel: 'Settled — live',
+    activeLabel: 'Awaiting approval',
+    billing: true,
+  },
+];
+
 
 // ============================================================
 // Zero-hardware checkout: take a card with nothing but the phone

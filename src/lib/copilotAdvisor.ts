@@ -68,7 +68,8 @@ const gearReply = (t: string, menu: LoadedMenu): CopilotResult => {
         ? `You have ${stations} menu categories, so I would route food to a kitchen printer and keep drinks at the counter — that is the one upgrade worth paying for early.`
         : 'With a short menu you do not need a second station yet. Add the kitchen printer the week you start hearing orders shouted twice.',
       `Here is that kit priced from the shop — take anything out you do not want, then add it to your cart.`,
-      `Software is $${PLANS[1].price}/mo (POS only) or $${PLANS[0].price}/mo with your website hosted, plus a one-time $${SETUP_FEE} setup. Free shipping, no contract — you can add gear later without changing anything.`,
+      `Software is $${PLANS[1].price}/mo (POS only) or $${PLANS[0].price}/mo with your website hosted. Setup starts with a $${PLANS[0].deposit} deposit and the balance is only charged when you approve the build. Free shipping, no contract — you can add gear later without changing anything.`,
+
     ].join('\n'),
     // The sidebar turns this into real product cards priced from ecom_products.
     kit: { planId: kit.id, name: kit.name, who, note: kit.note, handles: kit.handles },
@@ -228,21 +229,22 @@ export const runAdvisor = (raw: string, menu: LoadedMenu, site?: SiteSettings | 
     };
   }
 
-  if (/(cost|price|monthly|how much|fees?)/.test(t) && /(month|cost|much|plan|software|pay)/.test(t)) {
+  if (/(cost|price|monthly|how much|fees?|setup|deposit)/.test(t) && /(month|cost|much|plan|software|pay|setup|deposit)/.test(t)) {
     return {
       reply: [
-        `${PLANS[1].name}: $${PLANS[1].price}/mo + $${PLANS[1].setup} one-time setup — ${PLANS[1].blurb}`,
-        `${PLANS[0].name}: $${PLANS[0].price}/mo + $${PLANS[0].setup} one-time setup — ${PLANS[0].blurb}`,
+        `${PLANS[0].name}: $${PLANS[0].price}/mo — ${PLANS[0].setupDisplay}. ${PLANS[0].blurb}`,
+        `${PLANS[1].name}: $${PLANS[1].price}/mo — ${PLANS[1].setupDisplay}. ${PLANS[1].blurb}`,
+        `The setup is two invoices: $${PLANS[0].deposit} today to kick off the AI menu parsing and the build, and the balance only when you approve delivery. Nothing to refund, nothing clawed back.`,
         'Prepay 6 months and one month is free; prepay a year and two months are free.',
-        '$0 while we build. Take a week or take two months.',
-        'Billing starts the day you take your first real order. No contract, cancel any month.',
+        '$0 monthly while we build — billing starts the day you take your first real order. No contract, cancel any month.',
         'Tap to Pay and camera card scanning are included on both tiers — no dongles to buy.',
       ].join('\n'),
-      effects: [`$${PLANS[1].setup}–$${PLANS[0].setup} setup`, `$${PLANS[1].price}–$${PLANS[0].price}/mo`, 'No contract'],
+      effects: [`$${PLANS[0].deposit} to start`, `$${PLANS[1].price}–$${PLANS[0].price}/mo`, 'No contract'],
       tone: 'ok',
     };
 
   }
+
 
   // ---------------- Website build (reads the owner's SAVED settings) ----------------
   if (/(build|make|set ?up|design|create).*(site|website|page)|website page|my page/.test(t)) {

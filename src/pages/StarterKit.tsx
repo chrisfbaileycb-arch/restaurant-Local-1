@@ -6,7 +6,8 @@ import PageShell from '@/components/site/PageShell';
 import BudgetBuilder from '@/components/site/BudgetBuilder';
 import ProductCard from '@/components/ProductCard';
 import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
-import { BUDGET_TAG, formatCents, SETUP_FEE, PLANS } from '@/data/platform';
+import { BUDGET_TAG, formatCents, SETUP_DEPOSIT, PLANS } from '@/data/platform';
+
 
 
 
@@ -29,7 +30,8 @@ const PROMISES = [
   {
     icon: Wallet,
     title: 'No big first payout',
-    body: `Just a $${SETUP_FEE} one-time setup, free shipping and nothing due for install. Monthly software does not start until you go live.`,
+    body: `Just a $${SETUP_DEPOSIT} deposit to start — the setup balance is only charged when you approve the build. Free shipping, and monthly software does not start until you go live.`,
+
   },
 ];
 
@@ -52,7 +54,8 @@ const FAQS = [
   },
   {
     q: 'When does billing start?',
-    a: `You pay a $${SETUP_FEE} setup fee when you sign up, and nothing else while we build. Take two weeks or take two months — the monthly charge only begins the day your build goes live and you start taking orders.`,
+    a: `You pay a $${SETUP_DEPOSIT} deposit when you sign up — that kicks off the AI menu parsing and the build. The setup balance ($${PLANS[0].balance} on POS + Website, $${PLANS[1].balance} on POS Only) is only invoiced once you approve delivery, and the monthly charge starts the day you go live.`,
+
   },
 ];
 
@@ -119,7 +122,8 @@ const StarterKit: React.FC = () => {
               <Truck className="h-4 w-4 text-emerald-400" /> Free shipping on everything
             </span>
             <span className="inline-flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" /> ${SETUP_FEE} setup · billing starts at go-live
+              <ShieldCheck className="h-4 w-4 text-emerald-400" /> ${SETUP_DEPOSIT} deposit today · balance only at delivery
+
             </span>
 
             <span className="inline-flex items-center gap-2">

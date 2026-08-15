@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ArrowRight, Wallet, CalendarClock, Star, Nfc, Smartphone } from 'lucide-react';
+import { Check, ArrowRight, Wallet, CalendarClock, Star, Nfc, Smartphone, BadgePercent } from 'lucide-react';
 
 import Reveal from '@/components/site/Reveal';
 import {
-  PLANS, PRICING_HEADLINE, PRICING_SUBHEAD, PREPAY_OPTIONS, BILLING_STEPS,
+  PLANS, PRICING_HEADLINE, PRICING_SUBHEAD, PREPAY_OPTIONS, BILLING_STEPS, SETUP_DEPOSIT,
   prepayEffective, prepayTotal,
 } from '@/data/platform';
 
@@ -12,7 +12,6 @@ const Pricing: React.FC = () => {
   // Which tier the prepay math and the billing timeline are quoting.
   const [planId, setPlanId] = useState(PLANS[0].id);
   const selected = PLANS.find((p) => p.id === planId) || PLANS[0];
-  const firstYear = selected.setup + selected.price * 12;
 
   return (
     <section id="pricing" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
@@ -68,9 +67,25 @@ const Pricing: React.FC = () => {
                   </span>
                   <span className={`text-sm ${popular ? 'text-white/70' : 'text-slate-500'}`}> / month</span>
                 </p>
-                <p className={`mt-1 text-xs font-bold uppercase tracking-wide ${popular ? 'text-white/75' : 'text-slate-400'}`}>
-                  + ${p.setup} one-time setup · billing starts at go-live
-                </p>
+                {p.saveNote && (
+                  <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-600">
+                    <BadgePercent className="h-3.5 w-3.5" /> {p.saveNote}
+                  </p>
+                )}
+
+                {/* two-part milestone setup — deposit now, balance on delivery */}
+                <div
+                  className={`mt-4 rounded-2xl border px-4 py-3 ${
+                    popular ? 'border-white/25 bg-white/10' : 'border-emerald-200 bg-emerald-50'
+                  }`}
+                >
+                  <p className={`text-sm font-extrabold ${popular ? 'text-white' : 'text-emerald-900'}`}>
+                    {p.setupDisplay}
+                  </p>
+                  <p className={`mt-1 text-[11px] font-bold uppercase tracking-wide ${popular ? 'text-white/70' : 'text-emerald-600'}`}>
+                    Two invoices · balance only when you approve delivery
+                  </p>
+                </div>
 
                 <ul className="mt-6 space-y-2">
                   {p.features.map((f) => (
@@ -86,7 +101,7 @@ const Pricing: React.FC = () => {
                     popular ? 'bg-white text-rose-600' : 'bg-gradient-to-r from-fuchsia-600 to-orange-500 text-white'
                   }`}
                 >
-                  {p.cta}
+                  {p.cta} — ${SETUP_DEPOSIT} today
                 </Link>
               </div>
             </Reveal>
@@ -145,10 +160,11 @@ const Pricing: React.FC = () => {
       <Reveal className="mt-10 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-lime-50 to-white p-7">
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-lime-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
-            <CalendarClock className="h-3.5 w-3.5" /> How billing works
+            <CalendarClock className="h-3.5 w-3.5" /> How it works
           </span>
           <p className="text-sm font-bold text-emerald-900">
-            ${selected.setup} today. ${selected.price}/mo the day you open — not a day sooner.
+            Start with ${SETUP_DEPOSIT} deposit today → pay the ${selected.balance} balance only when you approve the build
+            and go live.
           </p>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-4">
@@ -168,7 +184,8 @@ const Pricing: React.FC = () => {
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-emerald-900">
           <span className="inline-flex items-center gap-2 font-bold">
-            <Wallet className="h-4 w-4" /> First 12 months on {selected.name}: ${firstYear.toLocaleString()}
+            <Wallet className="h-4 w-4" /> {selected.name}: ${SETUP_DEPOSIT} today, ${selected.balance} at delivery, then $
+            {selected.price}/mo
           </span>
           <span className="inline-flex items-center gap-2">
             <Check className="h-4 w-4 text-emerald-600" /> 0% commission on your online orders
@@ -186,3 +203,4 @@ const Pricing: React.FC = () => {
 };
 
 export default Pricing;
+
