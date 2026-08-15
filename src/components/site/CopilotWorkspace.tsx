@@ -32,6 +32,12 @@ interface Props {
   mode?: CopilotModeId;
   /** short bubble shown beside the tab the first time you land on a page */
   nudge?: boolean;
+  /**
+   * How the collapsed copilot advertises itself:
+   * 'tab'  — tall edge tab on work pages (POS, onboarding, gear)
+   * 'pill' — sleek floating pill on the marketing landing page
+   */
+  trigger?: 'tab' | 'pill';
 }
 
 /**
@@ -43,8 +49,9 @@ interface Props {
  * beside the work instead of floating over it.
  */
 const CopilotWorkspace: React.FC<Props> = ({
-  menu, open, onOpenChange, pinned, onPinnedChange, canPin, seed, mode = 'floor', nudge,
+  menu, open, onOpenChange, pinned, onPinnedChange, canPin, seed, mode = 'floor', nudge, trigger = 'tab',
 }) => {
+
   const ops = useOps();
   const cfg = COPILOT_MODES[mode] || COPILOT_MODES.floor;
   // Mount once, then keep it mounted so the conversation history and any
@@ -96,8 +103,46 @@ const CopilotWorkspace: React.FC<Props> = ({
 
   return (
     <>
-      {/* ---------- Edge tab (collapsed state) ---------- */}
-      {!open && (
+      {/* ---------- Floating trigger pill (landing page) ---------- */}
+      {!open && trigger === 'pill' && (
+        <div className="fixed bottom-5 right-5 z-[45] flex flex-col items-end gap-2">
+          {showNudge && (
+            <div className="animate-pop-in relative max-w-[230px] rounded-2xl bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-white shadow-xl ring-1 ring-white/10">
+              {cfg.nudge}
+              <button
+                onClick={() => setShowNudge(false)}
+                aria-label="Dismiss"
+                className="absolute -right-1.5 -top-1.5 rounded-full bg-slate-700 p-0.5 text-white/80 hover:text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          <button
+            onClick={openIt}
+            aria-expanded={false}
+            aria-label="Open the Operator Copilot demo"
+            className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-violet-700 via-fuchsia-600 to-orange-500 py-3.5 pl-4 pr-5 text-sm font-extrabold text-white shadow-2xl ring-1 ring-white/25 transition hover:scale-[1.04]"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </span>
+            <Bot className="h-5 w-5" />
+
+            Operator Copilot Demo
+            {alerts > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-300 px-1 text-[10px] font-extrabold text-slate-900">
+                {alerts}
+              </span>
+            )}
+            <ChevronRight className="h-4 w-4 animate-bob-x" />
+          </button>
+        </div>
+      )}
+
+      {/* ---------- Edge tab (collapsed state, work pages) ---------- */}
+      {!open && trigger === 'tab' && (
         <div className="fixed left-0 top-1/2 z-[45] hidden -translate-y-1/2 items-center gap-2 md:flex">
           <button
             onClick={openIt}
@@ -143,8 +188,8 @@ const CopilotWorkspace: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Mobile launcher */}
-      {!open && (
+      {/* Mobile launcher for the edge-tab pages (the pill already floats) */}
+      {!open && trigger === 'tab' && (
         <button
           onClick={openIt}
           aria-label={`Open the copilot — ${cfg.tabLabel}`}
@@ -162,6 +207,7 @@ const CopilotWorkspace: React.FC<Props> = ({
           )}
         </button>
       )}
+
 
       {/* ---------- Scrim (floating mode only) ---------- */}
       {/* Sits above the sticky header (z-50) so the drawer reads as an overlay. */}

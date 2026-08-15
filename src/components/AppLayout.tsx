@@ -18,6 +18,8 @@ import SiteHosting from '@/components/site/SiteHosting';
 import DeviceHub from '@/components/site/DeviceHub';
 import Failover from '@/components/site/Failover';
 import Pricing from '@/components/site/Pricing';
+import ZeroHardware from '@/components/site/ZeroHardware';
+
 
 
 import {
@@ -140,9 +142,13 @@ const AppLayout: React.FC = () => {
         pinned && copilotOpen ? 'lg:pl-[380px]' : ''
       }`}
     >
+      {/* Collapsed by default on the landing page — a sleek floating pill is
+          the only thing on screen until someone asks for the demo. */}
       <CopilotWorkspace
         menu={liveMenu}
         mode="floor"
+        trigger="pill"
+        nudge
         open={copilotOpen}
         onOpenChange={setCopilotOpen}
         pinned={pinned}
@@ -150,6 +156,7 @@ const AppLayout: React.FC = () => {
         canPin={!!user}
         seed={seed}
       />
+
 
       <Header />
 
@@ -405,6 +412,30 @@ const AppLayout: React.FC = () => {
 
       {/* ---------------- CONNECTIVITY FAILOVER / PHONE PIVOT ---------------- */}
       <Failover />
+
+      {/* ---------------- ZERO-HARDWARE CHECKOUT ---------------- */}
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <Reveal className="text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
+              <Sparkles className="h-3.5 w-3.5" /> Zero-Hardware Checkout
+            </span>
+            <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">
+              Take the card on the phone you already own
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+              Tap to Pay reads contactless cards, Apple Pay and Google Pay straight off the back of your phone or
+              tablet. Cards that will not tap get scanned by the camera instead of typed. Every sale is priced down the
+              cheapest compliant rail before it is even authorised.
+            </p>
+          </Reveal>
+          <Reveal delay={120} className="mx-auto mt-8 max-w-3xl">
+            {/* Live panel — the same component the register runs, on a demo ticket */}
+            <ZeroHardware total={2450} online onPaid={() => {}} />
+          </Reveal>
+        </div>
+      </section>
+
 
       {/* ---------------- HOSTED ONE-PAGE WEBSITE ---------------- */}
       <SiteHosting />

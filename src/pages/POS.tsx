@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload, Lock, Ban, Bot,
+  Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload, Lock, Ban, Bot, Smartphone, Monitor,
 } from 'lucide-react';
 import PageShell from '@/components/site/PageShell';
 import DeviceBar from '@/components/site/DeviceBar';
 import HealthBanner from '@/components/site/HealthBanner';
 import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
+import ZeroHardware, { type StationView } from '@/components/site/ZeroHardware';
 
 import type { MenuItem } from '@/data/menu';
 import { formatCents, formatTaxRate } from '@/data/platform';
@@ -43,7 +44,10 @@ const POS: React.FC = () => {
   const [tipPct, setTipPct] = useState(0);
   const [member, setMember] = useState('');
   const [memberFound, setMemberFound] = useState<null | { name: string; points: number }>(null);
-  const [receipt, setReceipt] = useState<null | { total: number; method: string; offline: boolean }>(null);
+  // Terminal on the counter, or the phone in an apron pocket — same rails.
+  const [station, setStation] = useState<StationView>('terminal');
+  const [receipt, setReceipt] = useState<null | { total: number; method: string; note?: string; offline: boolean }>(null);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -118,15 +122,16 @@ const POS: React.FC = () => {
     setMemberFound({ name: 'Returning guest', points: 240 });
   };
 
-  const pay = (method: string) => {
+  const pay = (method: string, note?: string) => {
     if (lines.length === 0) return;
-    setReceipt({ total, method, offline: !online });
+    setReceipt({ total, method, note, offline: !online });
     if (!online) setQueued((q) => q + 1);
     setLines([]);
     setTipPct(0);
     setMember('');
     setMemberFound(null);
   };
+
 
   return (
     <PageShell>
@@ -144,12 +149,30 @@ const POS: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Same register, two bodies: the counter screen or a phone in an apron */}
+            <div className="inline-flex rounded-xl border border-stone-200 bg-white p-0.5">
+              {([
+                { id: 'terminal' as StationView, label: 'Terminal', Icon: Monitor },
+                { id: 'mobile' as StationView, label: 'Mobile station', Icon: Smartphone },
+              ]).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setStation(id)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                    station === id ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" /> {label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => askCopilot()}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white shadow"
             >
               <Bot className="h-4 w-4" /> Ask the copilot
             </button>
+
             <button
               onClick={() => setOnline((o) => !o)}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
@@ -423,14 +446,14 @@ const POS: React.FC = () => {
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <button
-                onClick={() => pay('Card')}
+                onClick={() => pay('Card', 'Paired chip / tap reader')}
                 disabled={lines.length === 0}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 py-3.5 font-bold text-white disabled:opacity-40"
               >
                 <CreditCard className="h-4 w-4" /> Card
               </button>
               <button
-                onClick={() => pay('Cash')}
+                onClick={() => pay('Cash', 'Drawer kicked · counted at close')}
                 disabled={lines.length === 0}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-300 py-3.5 font-bold text-stone-800 disabled:opacity-40"
               >
@@ -438,11 +461,25 @@ const POS: React.FC = () => {
               </button>
             </div>
 
+            {/* Zero-hardware rails: tap the card straight to this device, or
+                scan it with the camera. Nothing plugged in, nothing rented. */}
+            <div className="mt-4">
+              <ZeroHardware
+                total={total}
+                online={online}
+                disabled={lines.length === 0 || ordersBlocked}
+                station={station}
+                onStationChange={setStation}
+                onPaid={(method, note) => pay(method, note)}
+              />
+            </div>
+
             {receipt && (
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
                 <p className="flex items-center gap-2 font-bold">
                   <Receipt className="h-4 w-4" /> {receipt.method} payment approved · {formatCents(receipt.total)}
                 </p>
+                {receipt.note && <p className="mt-1 text-xs font-semibold text-emerald-800">{receipt.note}</p>}
                 <p className="mt-1 text-xs">
                   {receipt.offline
                     ? 'Stored offline — will sync automatically when the connection returns.'
@@ -450,6 +487,7 @@ const POS: React.FC = () => {
                 </p>
               </div>
             )}
+
           </div>
         </div>
 

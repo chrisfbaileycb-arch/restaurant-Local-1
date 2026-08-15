@@ -208,38 +208,43 @@ export const calcProcessingCost = (p: Processor, monthlyVolume: number, avgTicke
 };
 
 // ---------------- Software plans ----------------
-// One product, one price. The only choice is whether we host your website too.
-export const SETUP_FEE = 100;
-export const HOSTING_DISCOUNT = 50;
-
+// Two tiers. Run it on the gear you already own — no dongles, no lock-in.
 export interface Plan {
   id: string;
   name: string;
   price: number;
+  /** one-time build fee for this tier */
+  setup: number;
   per: string;
   blurb: string;
   features: string[];
   cta: string;
+  badge?: string;
   highlight?: boolean;
   hosting: boolean;
 }
 
+export const PRICING_HEADLINE = 'One Simple Price. Zero Hardware Lock-In.';
+export const PRICING_SUBHEAD =
+  'Run it on the gear you already own today — iPad, Android tablet, iPhone, or laptop. No dongles, no proprietary junk.';
+
 export const PLANS: Plan[] = [
   {
     id: 'pos-web',
-    name: 'POS + Website',
-    price: 199,
+    name: 'POS + Website (The Full Engine)',
+    price: 149,
+    setup: 299,
     per: '/mo per location',
-    blurb: 'Everything below, plus we host and maintain your one-page website.',
+    blurb: 'The complete system: POS, live website, and online ordering built from one vibe-coded setup.',
     hosting: true,
+    badge: '★ MOST POPULAR ★',
     features: [
       'Everything in POS Only',
-      'One-page website, hosted by us',
-      'Your domain + SSL, renewed for you',
-      'Online ordering built into the page',
-      'Hours pulled live from Google Business',
-      'Menu photos cross-populate from your POS',
-      'Contact + hiring forms straight to your inbox',
+      'Auto-generated one-page website',
+      '0% commission online ordering',
+      'Google Business & SEO sync',
+      'Custom domain, SSL and hosting included',
+      '24/7 Copilot web edits',
     ],
     cta: 'Start my build',
     highlight: true,
@@ -247,30 +252,140 @@ export const PLANS: Plan[] = [
   {
     id: 'pos-only',
     name: 'POS Only',
-    price: 149,
+    price: 99,
+    setup: 199,
     per: '/mo per location',
-    blurb: 'Already have a website you love? Keep it and save $50 a month.',
+    blurb: 'For operators who already have a website and just need a lean, contract-free POS.',
     hosting: false,
     features: [
       'Unlimited stations, tablets & phones',
-      'Offline queue + LTE failover',
-      'Tabs, tickets & station routing',
-      'Rewards, scheduling & labor control',
-      'All 12 reports + tax filings',
-      'Least-cost card routing',
-      'Order link you can drop on any site',
+      'Offline queue & cellular failover',
+      'Kitchen and bar tickets',
+      '12 financial reports',
+      '24/7 AI Floor Copilot',
+      'Tap-to-Pay & Camera card scanning',
     ],
     cta: 'Start my build',
   },
 ];
 
+/** Legacy alias — the entry-tier build fee. Prefer plan.setup. */
+export const SETUP_FEE = PLANS[1].setup;
+export const HOSTING_DISCOUNT = PLANS[0].price - PLANS[1].price;
+
+// Prepay incentives — pay up front, get months free.
+export interface PrepayOption {
+  id: string;
+  label: string;
+  detail: string;
+  months: number;
+  freeMonths: number;
+}
+
+export const PREPAY_OPTIONS: PrepayOption[] = [
+  {
+    id: 'six',
+    label: 'Prepay 6 Months',
+    detail: 'Get 1 Month Free',
+    months: 6,
+    freeMonths: 1,
+  },
+  {
+    id: 'year',
+    label: 'Prepay 1 Year',
+    detail: 'Get 2 Months Free',
+    months: 12,
+    freeMonths: 2,
+  },
+];
+
+/** 6-month prepay on a $149 plan → "$127/mo effective" style math. */
+export const prepayEffective = (monthly: number, o: PrepayOption) =>
+  Math.round((monthly * (o.months - o.freeMonths)) / o.months);
+
+export const prepayTotal = (monthly: number, o: PrepayOption) => monthly * (o.months - o.freeMonths);
+
 // How billing actually works — no monthly charge until the build is live.
 export const BILLING_STEPS = [
-  { id: 1, title: 'Pay the $100 setup', body: 'One time, covers menu parsing, POS build, hardware staging and your site.', note: 'Due at signup' },
+  { id: 1, title: 'Pay the one-time setup', body: '$199 for POS Only, $299 for the Full Engine — menu parsing, POS build and your site.', note: 'Due at signup' },
   { id: 2, title: 'We build it', body: 'Take a week or take two months — you tell us when you are ready to open.', note: '$0 while you build' },
   { id: 3, title: 'You approve the build', body: 'Walk the POS, the ordering page and the website. Change anything.', note: 'Still $0' },
-  { id: 4, title: 'Go live — billing starts', body: 'The first monthly charge lands the day you take your first real order.', note: '$149 or $199/mo' },
+  { id: 4, title: 'Go live — billing starts', body: 'The first monthly charge lands the day you take your first real order.', note: '$99 or $149/mo' },
 ];
+
+// ============================================================
+// Zero-hardware checkout: take a card with nothing but the phone
+// or tablet already in the operator's hand.
+// ============================================================
+
+export interface PayRail {
+  id: 'tap' | 'scan' | 'reader' | 'cash';
+  name: string;
+  short: string;
+  how: string;
+  /** effective processing rate for this entry method */
+  rate: number;
+  perTxn: number;
+  /** the acquirer least-cost routing picks for this entry method */
+  routesTo: string;
+  icon: string; // lucide icon name resolved by the consuming component
+  tone: string;
+  needsHardware: boolean;
+}
+
+export const PAY_RAILS: PayRail[] = [
+  {
+    id: 'tap',
+    name: 'Tap to Pay (NFC)',
+    short: 'Tap',
+    how: 'Guest taps a contactless card, Apple Pay or Google Pay on the back of your phone or tablet. Zero dongles.',
+    rate: 2.15,
+    perTxn: 0.08,
+    routesTo: 'Love Local Direct (interchange+)',
+    icon: 'Nfc',
+    tone: 'from-violet-500 to-indigo-500',
+    needsHardware: false,
+  },
+  {
+    id: 'scan',
+    name: 'Camera Card Scan (OCR)',
+    short: 'Scan',
+    how: 'Non-tap card? Point the camera at it — the number and expiry are read on device, masked and encrypted instantly. No typing.',
+    rate: 2.62,
+    perTxn: 0.12,
+    routesTo: 'Love Local Flat Rate',
+    icon: 'ScanLine',
+    tone: 'from-fuchsia-500 to-pink-500',
+    needsHardware: false,
+  },
+  {
+    id: 'reader',
+    name: 'Chip / swipe reader',
+    short: 'Reader',
+    how: 'A paired Bluetooth reader, if you already own one. Optional — nothing here requires it.',
+    rate: 2.2,
+    perTxn: 0.08,
+    routesTo: 'Love Local Direct (interchange+)',
+    icon: 'CreditCard',
+    tone: 'from-sky-500 to-cyan-400',
+    needsHardware: true,
+  },
+];
+
+export const ZERO_HARDWARE_POINTS = [
+  'Tap to Pay works on any NFC iPhone or Android — the phone is the terminal.',
+  'Camera scan never stores a readable frame; the number is masked before it leaves the lens.',
+  'Smart interchange optimization picks the cheapest compliant rail per transaction, card-present or scanned.',
+  'Both rails queue offline and settle themselves the second data returns.',
+];
+
+/** Rate lookup used by the register readout. */
+export const railById = (id: PayRail['id']) => PAY_RAILS.find((r) => r.id === id) || PAY_RAILS[0];
+
+/** What this exact sale costs to process on a given rail. */
+export const railCost = (rail: PayRail, amountCents: number) =>
+  Math.round(amountCents * (rail.rate / 100)) + Math.round(rail.perTxn * 100);
+
 
 // ---------------- Hosted one-page website ----------------
 // Deliberately short. Guests come to look at food and order, not to read.

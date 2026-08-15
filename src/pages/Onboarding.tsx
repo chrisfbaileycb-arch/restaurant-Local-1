@@ -7,7 +7,8 @@ import {
 import PageShell from '@/components/site/PageShell';
 import SignupForm from '@/components/site/SignupForm';
 import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
-import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents, PLANS, SETUP_FEE, HOSTING_DISCOUNT } from '@/data/platform';
+import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents, PLANS, HOSTING_DISCOUNT } from '@/data/platform';
+
 
 import { useAuth } from '@/contexts/AuthContext';
 import { parseMenuFile, parseMenuText, saveParsedMenu, loadShopMenu } from '@/lib/menuStore';
@@ -461,9 +462,10 @@ const Onboarding: React.FC = () => {
                 ))}
               </div>
               <p className="mt-3 text-xs font-semibold text-stone-600">
-                ${SETUP_FEE} one-time setup today · your ${wantsSite ? PLANS[0].price : PLANS[1].price}/mo does not start
-                until your build goes live.
+                ${wantsSite ? PLANS[0].setup : PLANS[1].setup} one-time setup today · your $
+                {wantsSite ? PLANS[0].price : PLANS[1].price}/mo does not start until your build goes live.
               </p>
+
             </div>
 
 
@@ -546,7 +548,8 @@ const Onboarding: React.FC = () => {
                     : 'Order link ready to drop on the website you already have',
                   `${REWARD_PROGRAMS.find((r) => r.id === reward)?.name} rewards switched on`,
                   'Reports, sales tax and payroll exports enabled',
-                  `$${SETUP_FEE} setup today — your $${wantsSite ? PLANS[0].price : PLANS[1].price}/mo starts at go-live`,
+                  `$${wantsSite ? PLANS[0].setup : PLANS[1].setup} setup today — your $${wantsSite ? PLANS[0].price : PLANS[1].price}/mo starts at go-live`,
+
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {t}

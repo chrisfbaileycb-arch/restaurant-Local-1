@@ -125,15 +125,17 @@ export const runAdvisor = (raw: string, menu: LoadedMenu, site?: SiteSettings | 
   if (/(cost|price|monthly|how much|fees?)/.test(t) && /(month|cost|much|plan|software|pay)/.test(t)) {
     return {
       reply: [
-        `$${SETUP_FEE} one time at signup — that covers menu parsing, the POS build, hardware staging and your site.`,
-        `$0 while you build. Take a week or take two months.`,
-        `${PLANS[0].name}: $${PLANS[0].price}/mo — ${PLANS[0].blurb}`,
-        `${PLANS[1].name}: $${PLANS[1].price}/mo — ${PLANS[1].blurb}`,
+        `${PLANS[1].name}: $${PLANS[1].price}/mo + $${PLANS[1].setup} one-time setup — ${PLANS[1].blurb}`,
+        `${PLANS[0].name}: $${PLANS[0].price}/mo + $${PLANS[0].setup} one-time setup — ${PLANS[0].blurb}`,
+        'Prepay 6 months and one month is free; prepay a year and two months are free.',
+        '$0 while we build. Take a week or take two months.',
         'Billing starts the day you take your first real order. No contract, cancel any month.',
+        'Tap to Pay and camera card scanning are included on both tiers — no dongles to buy.',
       ].join('\n'),
-      effects: [`$${SETUP_FEE} setup`, `$${PLANS[1].price}–$${PLANS[0].price}/mo`, 'No contract'],
+      effects: [`$${PLANS[1].setup}–$${PLANS[0].setup} setup`, `$${PLANS[1].price}–$${PLANS[0].price}/mo`, 'No contract'],
       tone: 'ok',
     };
+
   }
 
   // ---------------- Website build (reads the owner's SAVED settings) ----------------
