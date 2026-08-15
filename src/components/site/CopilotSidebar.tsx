@@ -1,16 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Sparkles, Send, Mic, MicOff, Ban, Percent, Users, Timer, FileCheck2, Loader2, Copy, Check,
-  ChevronDown, Bot, ClipboardList, ChevronLeft, Pin, PinOff,
+  ChevronDown, Bot, ClipboardList, ChevronLeft, Pin, PinOff, History, MessageSquare,
   Globe, Clock, ImageIcon, ShoppingBag, Server, Package, Wallet, Truck, ChefHat, Receipt,
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
 import CopilotSentinel from '@/components/site/CopilotSentinel';
+import CopilotKitCard from '@/components/site/CopilotKitCard';
+import CopilotHistory from '@/components/site/CopilotHistory';
 import { useDeviceHealth } from '@/hooks/useDeviceHealth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useOps } from '@/lib/opsStore';
 import { runCommand, laborAudit } from '@/lib/copilotBrain';
 import { runAdvisor } from '@/lib/copilotAdvisor';
+import { saveCopilotMessage, loadCopilotHistory } from '@/lib/copilotHistory';
+import { loadSiteSettings, type SiteSettings } from '@/lib/siteSettings';
 import { QUICK_ACTIONS, COPILOT_SUGGESTIONS, COPILOT_SKILLS, TODAY_SNAPSHOT } from '@/data/copilot';
 import { COPILOT_MODES, type CopilotModeId } from '@/data/copilotModes';
 import { DEVICE_KINDS, formatCents, type DeviceKindId } from '@/data/platform';
@@ -48,6 +53,7 @@ interface Msg {
   text: string;
   effects?: string[];
   payload?: any;
+  kit?: { planId: string; name: string; who: string; note: string; handles: string[] };
   tone?: 'ok' | 'warn' | 'alert';
 }
 
@@ -88,6 +94,7 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
   menu, seed, mode = 'floor', onCollapse, canPin, pinned, onTogglePin,
 }) => {
   const ops = useOps();
+  const { user } = useAuth();
   const cfg = COPILOT_MODES[mode] || COPILOT_MODES.floor;
   const isFloor = mode === 'floor';
   const { verifyOne, devices, simulateDrop } = useDeviceHealth();
@@ -95,6 +102,8 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const [showSkills, setShowSkills] = useState(true);
+  const [view, setView] = useState<'chat' | 'history'>('chat');
+  const [site, setSite] = useState<SiteSettings | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -113,14 +122,73 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
     },
   ]);
 
+  // Everything the copilot says or is told is written to copilot_messages.
+  const record = useCallback(
+    (msg: Omit<Msg, 'id'>) => {
+      saveCopilotMessage({
+        shopId: menu.shopId,
+        userId: user?.id || null,
+        mode,
+        role: msg.role,
+        text: msg.text,
+        effects: msg.effects,
+        payload: msg.payload ?? (msg.kit ? { kit: msg.kit } : null),
+      });
+    },
+    [menu.shopId, user?.id, mode],
+  );
 
-  const push = useCallback((msg: Omit<Msg, 'id'>) => {
-    setMessages((m) => [...m, { ...msg, id: uid() }]);
-  }, []);
+  const push = useCallback(
+    (msg: Omit<Msg, 'id'>) => {
+      setMessages((m) => [...m, { ...msg, id: uid() }]);
+      record(msg);
+    },
+    [record],
+  );
+
+  // Pick the conversation back up where it left off (last 50 saved messages).
+  useEffect(() => {
+    let cancelled = false;
+    loadCopilotHistory(menu.shopId, user?.id || null, 50).then((rows) => {
+      if (cancelled || rows.length === 0) return;
+      setMessages((m) => [
+        m[0],
+        {
+          id: 'resume',
+          role: 'system',
+          tone: 'ok',
+          text: `Picking up where we left off — ${rows.length} saved message${rows.length === 1 ? '' : 's'} loaded. Open History for the full record and the audit export.`,
+        },
+        ...rows.map((r) => ({
+          id: r.id,
+          role: r.role,
+          text: r.text,
+          effects: r.effects,
+          payload: r.payload && !r.payload.kit ? r.payload : undefined,
+          kit: r.payload?.kit,
+        })),
+      ]);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menu.shopId, user?.id]);
+
+  // The owner's real saved website setup, so build answers use live values.
+  useEffect(() => {
+    let cancelled = false;
+    loadSiteSettings(menu.shopId).then((s) => !cancelled && setSite(s));
+    return () => {
+      cancelled = true;
+    };
+  }, [menu.shopId]);
 
   useEffect(() => {
-    streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, busy]);
+    if (view === 'chat') {
+      streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages, busy, view]);
 
   // Watchdog: announce a network failover in the agent stream.
   const prevNet = useRef(ops.network);
@@ -164,14 +232,15 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
   const send = async (raw?: string) => {
     const text = (raw ?? input).trim();
     if (!text || busy) return;
+    setView('chat');
     push({ role: 'user', text });
     setInput('');
     setBusy(true);
 
     // On the build surfaces the advisor answers first (store build, gear),
     // then the floor commands. On the register it is the other way round.
-    const first = isFloor ? runCommand(text, menu) : runAdvisor(text, menu);
-    const result = first.unhandled ? (isFloor ? runAdvisor(text, menu) : runCommand(text, menu)) : first;
+    const first = isFloor ? runCommand(text, menu) : runAdvisor(text, menu, site);
+    const result = first.unhandled ? (isFloor ? runAdvisor(text, menu, site) : runCommand(text, menu)) : first;
 
     if (result.effects?.[0] === '__hardware__') {
       const target = (['receipt-printer', 'kitchen-printer', 'cash-drawer', 'card-reader'] as DeviceKindId[]).find((id) =>
@@ -186,7 +255,14 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
     }
 
     if (!result.unhandled) {
-      push({ role: 'agent', text: result.reply, effects: result.effects, payload: result.payload, tone: result.tone });
+      push({
+        role: 'agent',
+        text: result.reply,
+        effects: result.effects,
+        payload: result.payload,
+        kit: result.kit,
+        tone: result.tone,
+      });
       setBusy(false);
       return;
     }
@@ -209,6 +285,15 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
             laborPct: `${(pct * 100).toFixed(1)}%`,
             overtimeRisk: overtime.map((s) => `${s.name} ${s.weekHours}h`),
             network: ops.network,
+            website: site
+              ? {
+                  domain: site.domain,
+                  googlePlaceId: site.google_place_id,
+                  logoSaved: !!site.logo_url,
+                  hiringEnabled: site.hiring_enabled,
+                  sectionsOn: site.section_order,
+                }
+              : null,
           },
         },
       });
@@ -277,6 +362,19 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
             {cfg.role} · {menu.isDemo ? 'demo shop' : menu.shopName}
           </p>
         </div>
+
+        {/* History / chat toggle */}
+        <button
+          onClick={() => setView((v) => (v === 'history' ? 'chat' : 'history'))}
+          title={view === 'history' ? 'Back to the conversation' : 'History & audit export'}
+          aria-pressed={view === 'history'}
+          className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-extrabold uppercase tracking-wide transition ${
+            view === 'history' ? 'bg-white text-violet-700' : 'bg-white/15 text-white hover:bg-white/25'
+          }`}
+        >
+          {view === 'history' ? <MessageSquare className="h-3.5 w-3.5" /> : <History className="h-3.5 w-3.5" />}
+          {view === 'history' ? 'Chat' : 'History'}
+        </button>
 
         {/* Pin (signed-in operators only) + collapse */}
         {canPin && onTogglePin && (
@@ -357,8 +455,14 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
+      {/* History view */}
+      {view === 'history' && <CopilotHistory shopId={menu.shopId} userId={user?.id || null} />}
+
       {/* Stream */}
-      <div ref={streamRef} className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+      <div
+        ref={streamRef}
+        className={`flex-1 space-y-2.5 overflow-y-auto px-3 py-3 ${view === 'history' ? 'hidden' : ''}`}
+      >
         {showSkills && (
           <div className="rounded-xl border border-white/10 bg-white/5 p-3">
             <div className="flex items-start justify-between gap-2">
@@ -402,6 +506,7 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
                   ))}
                 </div>
               )}
+              {m.kit && <CopilotKitCard kit={m.kit} />}
               {m.payload && <PayloadBlock payload={m.payload} />}
             </div>
           ),

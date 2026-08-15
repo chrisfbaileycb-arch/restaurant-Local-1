@@ -21,10 +21,19 @@ export interface CopilotResult {
   effects?: string[];
   /** Structured payload (daily close) rendered as JSON. */
   payload?: any;
+  /** A buildable hardware kit rendered as real, priced product cards. */
+  kit?: {
+    planId: string;
+    name: string;
+    who: string;
+    note: string;
+    handles: string[];
+  };
   /** Nothing matched — caller should ask the model. */
   unhandled?: boolean;
   tone?: 'ok' | 'warn' | 'alert';
 }
+
 
 const money = (c: number) => formatCents(c);
 

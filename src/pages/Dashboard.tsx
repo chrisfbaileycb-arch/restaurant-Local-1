@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Gift, CreditCard, Download, TrendingUp, Users, Percent, Receipt, Package,
-  Activity, ShieldCheck, ShieldAlert, Plug, Clock,
+  Activity, ShieldCheck, ShieldAlert, Plug, Clock, Globe,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
@@ -14,6 +14,8 @@ import TaxRateSetting from '@/components/site/TaxRateSetting';
 import TaxJurisdictions from '@/components/site/TaxJurisdictions';
 import ItemTaxClasses from '@/components/site/ItemTaxClasses';
 import PayrollTaxSetting from '@/components/site/PayrollTaxSetting';
+import WebsiteSettings from '@/components/site/WebsiteSettings';
+import CopilotDock from '@/components/site/CopilotDock';
 
 import { useDeviceHealth, sinceLabel } from '@/hooks/useDeviceHealth';
 
@@ -24,6 +26,7 @@ import {
 
 const TABS = [
   { id: 'stations', label: 'Stations & hardware', icon: Plug },
+  { id: 'website', label: 'Website', icon: Globe },
   { id: 'sales', label: 'Sales & reports', icon: BarChart3 },
   { id: 'tax', label: 'Sales tax', icon: Receipt },
   { id: 'team', label: 'Schedule & labor', icon: CalendarDays },
@@ -31,6 +34,7 @@ const TABS = [
   { id: 'rates', label: 'Rate shopper', icon: CreditCard },
   { id: 'orders', label: 'Store orders', icon: Package },
 ];
+
 
 const PIE_COLORS = ['#f59e0b', '#0ea5e9', '#10b981', '#f43f5e', '#8b5cf6'];
 
@@ -431,7 +435,10 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
+        {tab === 'website' && <WebsiteSettings />}
+
         {tab === 'orders' && (
+
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
             <div className="border-b border-stone-200 px-5 py-4">
               <h2 className="font-bold text-stone-900">Your hardware orders</h2>
@@ -473,7 +480,11 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Build-side copilot: "Ask the copilot" on the Website tab opens this. */}
+      <CopilotDock mode="website" />
     </PageShell>
+
   );
 };
 
