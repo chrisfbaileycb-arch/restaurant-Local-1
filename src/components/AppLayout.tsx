@@ -30,6 +30,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
 import { computeTax } from '@/lib/taxEngine';
 import type { LoadedMenu } from '@/lib/menuStore';
+import CopilotWorkspace from '@/components/site/CopilotWorkspace';
+import { useOps } from '@/lib/opsStore';
 
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -49,11 +51,13 @@ const FEATURE_TONES = [
 
 const AppLayout: React.FC = () => {
   const { user } = useAuth();
+  const ops = useOps();
   const [featured, setFeatured] = useState<any[]>([]);
   const [volume, setVolume] = useState(45000);
   const [ticket, setTicket] = useState(14);
   const [reportFilter, setReportFilter] = useState<'All' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly'>('All');
   const [online, setOnline] = useState(true);
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const [liveMenu, setLiveMenu] = useState<LoadedMenu>(DEMO_LOADED_MENU);
 
   useEffect(() => {
@@ -72,12 +76,18 @@ const AppLayout: React.FC = () => {
       .catch(() => setLiveMenu(DEMO_LOADED_MENU));
   }, [user?.id]);
 
-  const mockItems = liveMenu.items.slice(0, 9);
-  const mockSubtotal = mockItems.slice(0, 3).reduce((s, m) => s + m.price, 0);
+  // The terminal mock reads the same shared floor state the copilot writes to:
+  // 86'd items grey out and price overrides apply the moment a command lands.
+  const mockItems = liveMenu.items
+    .slice(0, 9)
+    .map((m) => ({ ...m, price: ops.priceFor(m.name, m.price), off: ops.is86(m.name) }));
+  const sellable = mockItems.filter((m) => !m.off).slice(0, 3);
+  const mockSubtotal = sellable.reduce((s, m) => s + m.price, 0);
+  const mockDiscount = Math.round(mockSubtotal * (ops.discountPct / 100));
   // Tax runs through the same jurisdiction engine the register uses — state,
   // county, city and any exemptions — never a hardcoded number.
   const mockTax = computeTax(
-    mockItems.slice(0, 3).map((m) => ({ amount: m.price, taxClass: m.taxClass })),
+    sellable.map((m) => ({ amount: m.price - Math.round(m.price * (ops.discountPct / 100)), taxClass: m.taxClass })),
     liveMenu.taxProfile,
   ).total;
 
@@ -91,7 +101,12 @@ const AppLayout: React.FC = () => {
   const visibleReports = REPORTS.filter((r) => reportFilter === 'All' || r.cadence === reportFilter);
 
   return (
-    <div className="flex min-h-screen flex-col bg-amber-50/40">
+    <div
+      className={`flex min-h-screen flex-col bg-amber-50/40 transition-[padding] ${
+        railCollapsed ? 'lg:pl-14' : 'lg:pl-[380px]'
+      }`}
+    >
+      <CopilotWorkspace menu={liveMenu} collapsed={railCollapsed} onToggle={setRailCollapsed} />
       <Header />
 
       {/* ---------------- HERO ---------------- */}
@@ -174,20 +189,30 @@ const AppLayout: React.FC = () => {
                 {mockItems.map((m, i) => (
                   <div
                     key={m.id}
-                    className={`rounded-xl bg-gradient-to-br p-3 text-left ${
+                    className={`relative rounded-xl bg-gradient-to-br p-3 text-left transition ${
                       ['from-fuchsia-500/25 to-violet-500/10', 'from-sky-500/25 to-cyan-500/10', 'from-amber-400/25 to-orange-500/10'][i % 3]
-                    }`}
+                    } ${m.off ? 'opacity-35 grayscale' : ''}`}
                   >
                     <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-white">{m.name}</p>
                     <p className="mt-1 text-[11px] font-bold text-amber-300">${(m.price / 100).toFixed(2)}</p>
+                    {m.off && (
+                      <span className="absolute right-1.5 top-1.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-extrabold text-white">
+                        86
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
               <div className="mt-3 rounded-xl bg-white/5 p-3">
                 <div className="flex justify-between text-xs text-slate-300"><span>Subtotal</span><span>${(mockSubtotal / 100).toFixed(2)}</span></div>
+                {mockDiscount > 0 && (
+                  <div className="flex justify-between text-xs font-semibold text-emerald-300">
+                    <span>Copilot discount ({ops.discountPct}%)</span><span>-${(mockDiscount / 100).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xs text-slate-300"><span>Tax</span><span>${(mockTax / 100).toFixed(2)}</span></div>
                 <div className="mt-1 flex justify-between border-t border-white/10 pt-2 text-sm font-bold text-white">
-                  <span>Total</span><span>${((mockSubtotal + mockTax) / 100).toFixed(2)}</span>
+                  <span>Total</span><span>${((mockSubtotal - mockDiscount + mockTax) / 100).toFixed(2)}</span>
                 </div>
               </div>
               <Link
@@ -199,9 +224,11 @@ const AppLayout: React.FC = () => {
             </div>
 
             <p className="mt-3 text-center text-xs text-white/70">
-              Tap the status pill — that is exactly what a network failure looks like on the floor.
+              Tell the copilot to 86 an item or drop a price — this terminal, the online cart and your public menu
+              all change together.
             </p>
           </div>
+
         </div>
       </section>
 

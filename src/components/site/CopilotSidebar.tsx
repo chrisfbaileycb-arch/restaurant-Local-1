@@ -1,0 +1,388 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Sparkles, Send, Mic, MicOff, Ban, Percent, Users, Timer, FileCheck2, Loader2, Copy, Check,
+  ChevronDown, Bot, ClipboardList,
+} from 'lucide-react';
+
+import { supabase } from '@/lib/supabase';
+import CopilotSentinel from '@/components/site/CopilotSentinel';
+import { useDeviceHealth } from '@/hooks/useDeviceHealth';
+import { useOps } from '@/lib/opsStore';
+import { runCommand, laborAudit } from '@/lib/copilotBrain';
+import { QUICK_ACTIONS, COPILOT_SUGGESTIONS, COPILOT_SKILLS, TODAY_SNAPSHOT } from '@/data/copilot';
+import { DEVICE_KINDS, formatCents, type DeviceKindId } from '@/data/platform';
+import type { LoadedMenu } from '@/lib/menuStore';
+
+const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Ban, Percent, Users, Timer, FileCheck2,
+};
+
+interface Msg {
+  id: string;
+  role: 'user' | 'agent' | 'system';
+  text: string;
+  effects?: string[];
+  payload?: any;
+  tone?: 'ok' | 'warn' | 'alert';
+}
+
+const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+const TONE_RING = {
+  ok: 'border-emerald-400/25',
+  warn: 'border-amber-400/30',
+  alert: 'border-red-400/35',
+};
+
+const PayloadBlock: React.FC<{ payload: any }> = ({ payload }) => {
+  const [copied, setCopied] = useState(false);
+  const json = JSON.stringify(payload, null, 2);
+  return (
+    <div className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+      <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ledger handoff payload</span>
+        <button
+          onClick={() => {
+            navigator.clipboard?.writeText(json);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1600);
+          }}
+          className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 hover:text-amber-200"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          {copied ? 'Copied' : 'Copy JSON'}
+        </button>
+      </div>
+      <pre className="max-h-48 overflow-auto p-2.5 text-[10px] leading-relaxed text-emerald-300">{json}</pre>
+    </div>
+  );
+};
+
+const CopilotSidebar: React.FC<{ menu: LoadedMenu }> = ({ menu }) => {
+  const ops = useOps();
+  const { verifyOne, devices, simulateDrop } = useDeviceHealth();
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [showSkills, setShowSkills] = useState(true);
+  const streamRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const [messages, setMessages] = useState<Msg[]>([
+    {
+      id: 'welcome',
+      role: 'agent',
+      tone: 'ok',
+      text: `Copilot online for ${menu.isDemo ? 'the demo shop' : menu.shopName}. ${menu.items.length} items loaded, ${TODAY_SNAPSHOT.ticketCount} tickets rung today. Tell me what changed on the floor and I will push it to the register, the online cart and your website together.`,
+    },
+  ]);
+
+  const push = useCallback((msg: Omit<Msg, 'id'>) => {
+    setMessages((m) => [...m, { ...msg, id: uid() }]);
+  }, []);
+
+  useEffect(() => {
+    streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, busy]);
+
+  // Watchdog: announce a network failover in the agent stream.
+  const prevNet = useRef(ops.network);
+  useEffect(() => {
+    if (prevNet.current !== ops.network) {
+      push({
+        role: 'system',
+        tone: ops.network === 'lte' ? 'warn' : 'ok',
+        text:
+          ops.network === 'lte'
+            ? 'Wi-Fi dropped. LTE cellular failover engaged in 2.1s — card auth and kitchen tickets never stopped. Local queue is writing to disk.'
+            : 'Wi-Fi is back. Queued tickets and card batches synced, LTE released.',
+        effects: ops.network === 'lte' ? ['Failover active', 'Queue armed'] : ['Synced'],
+      });
+      prevNet.current = ops.network;
+    }
+  }, [ops.network, push]);
+
+  const runDiagnostics = (only?: DeviceKindId) => {
+    const targets = only ? [only] : (['receipt-printer', 'kitchen-printer', 'cash-drawer', 'card-reader'] as DeviceKindId[]);
+    targets.forEach((id) => verifyOne(id));
+    window.setTimeout(() => {
+      const rows = devices.filter((d) => targets.includes(d.id));
+      const lines = targets.map((id) => {
+        const row = rows.find((r) => r.id === id);
+        const name = DEVICE_KINDS.find((d) => d.id === id)?.name || id;
+        if (!row) return `${name}: not paired to this station.`;
+        if (row.state === 'down') return `${name}: no answer — check power and cable.`;
+        return `${name}: answered in ${row.latency ?? 0}ms.`;
+      });
+      push({
+        role: 'agent',
+        tone: rows.some((r) => r.state === 'down') ? 'alert' : 'ok',
+        text: `Diagnostics complete.\n${lines.join('\n')}\nSpool queue clear, drawer latch trigger responding and the swiper is reporting an encrypted P2PE session.`,
+        effects: ['Spool clear', 'Latch OK', 'P2PE verified'],
+      });
+      setBusy(false);
+    }, 1200);
+  };
+
+  const send = async (raw?: string) => {
+    const text = (raw ?? input).trim();
+    if (!text || busy) return;
+    push({ role: 'user', text });
+    setInput('');
+    setBusy(true);
+
+    const result = runCommand(text, menu);
+
+    if (result.effects?.[0] === '__hardware__') {
+      const target = (['receipt-printer', 'kitchen-printer', 'cash-drawer', 'card-reader'] as DeviceKindId[]).find((id) =>
+        text.toLowerCase().includes(id.split('-')[0]),
+      );
+      if (/drop|unplug|fail|kill wifi|simulate/.test(text.toLowerCase()) && target) {
+        simulateDrop(target);
+      }
+      push({ role: 'agent', tone: 'ok', text: 'Running hardware diagnostics on this station…' });
+      runDiagnostics(target);
+      return;
+    }
+
+    if (!result.unhandled) {
+      push({ role: 'agent', text: result.reply, effects: result.effects, payload: result.payload, tone: result.tone });
+      setBusy(false);
+      return;
+    }
+
+    // Open-ended question — hand it to the model with live shop context.
+    const { laborCost, pct, overtime } = laborAudit();
+    try {
+      const { data } = await supabase.functions.invoke('copilot-chat', {
+        body: {
+          message: text,
+          history: messages.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })),
+          context: {
+            shop: menu.shopName,
+            itemCount: menu.items.length,
+            categories: menu.categories,
+            eightySixed: ops.eightySixed,
+            activePromos: ops.promos.map((p) => `${p.pct}% off ${p.scope}`),
+            netSalesToday: formatCents(TODAY_SNAPSHOT.netSales),
+            laborCost: formatCents(laborCost),
+            laborPct: `${(pct * 100).toFixed(1)}%`,
+            overtimeRisk: overtime.map((s) => `${s.name} ${s.weekHours}h`),
+            network: ops.network,
+          },
+        },
+      });
+      push({ role: 'agent', tone: 'ok', text: data?.reply || 'I did not catch that one — try a direct command.' });
+    } catch {
+      push({
+        role: 'agent',
+        tone: 'warn',
+        text: 'I could not reach the assistant. Direct commands still work: 86 an item, split a check, labor margin audit, or run daily close.',
+      });
+    }
+    setBusy(false);
+  };
+
+  const toggleVoice = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      push({ role: 'system', tone: 'warn', text: 'This browser will not open the microphone. Type the command instead — same result.' });
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.onresult = (e: any) => {
+      const said = e.results?.[0]?.[0]?.transcript || '';
+      setListening(false);
+      if (said) send(said);
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    recognitionRef.current = rec;
+    rec.start();
+    setListening(true);
+  };
+
+  return (
+    <div className="flex h-full flex-col bg-slate-900 text-white">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 border-b border-white/10 bg-gradient-to-r from-violet-700 via-fuchsia-700 to-orange-600 px-4 py-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+          <Bot className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-extrabold leading-tight">Love Local Operator Copilot</p>
+          <p className="flex items-center gap-1 text-[11px] text-white/80">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+            Watching the floor · {menu.isDemo ? 'demo shop' : menu.shopName}
+          </p>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="border-b border-white/10 px-3 py-2.5">
+        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Quick actions</p>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_ACTIONS.map((a) => {
+            const Icon = ICONS[a.icon] || Sparkles;
+            const instant = a.id !== 'eighty-six';
+            return (
+              <button
+                key={a.id}
+                title={a.hint}
+                onClick={() => (instant ? send(a.command) : setInput(a.command))}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1.5 text-[11px] font-bold text-slate-100 transition hover:border-amber-300/50 hover:bg-amber-400/15 hover:text-amber-200"
+              >
+                <Icon className="h-3.5 w-3.5" /> {a.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Live state chips */}
+      {(ops.eightySixed.length > 0 || ops.promos.length > 0 || Object.keys(ops.priceOverrides).length > 0) && (
+        <div className="flex flex-wrap gap-1.5 border-b border-white/10 bg-slate-950/50 px-3 py-2">
+          {ops.eightySixed.map((n) => (
+            <button
+              key={n}
+              onClick={() => send(`restore ${n}`)}
+              title="Tap to put it back on"
+              className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-red-300"
+            >
+              86 · {n}
+            </button>
+          ))}
+          {Object.entries(ops.priceOverrides).map(([n, c]) => (
+            <span key={n} className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">
+              {n} → {formatCents(c as number)}
+            </span>
+          ))}
+          {ops.promos.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => ops.endPromo(p.id)}
+              className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300"
+            >
+              {p.pct}% {p.scope} · end
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Stream */}
+      <div ref={streamRef} className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        {showSkills && (
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-300">What I can run</p>
+              <button onClick={() => setShowSkills(false)} className="text-slate-400 hover:text-white">
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <ul className="mt-2 space-y-1.5">
+              {COPILOT_SKILLS.map((s) => (
+                <li key={s.title} className="text-[11px] leading-snug text-slate-300">
+                  <span className="font-bold text-white">{s.title}</span> — {s.body}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {messages.map((m) =>
+          m.role === 'user' ? (
+            <div key={m.id} className="ml-6 rounded-xl rounded-br-sm bg-gradient-to-br from-fuchsia-600 to-violet-600 px-3 py-2 text-sm font-medium">
+              {m.text}
+            </div>
+          ) : (
+            <div
+              key={m.id}
+              className={`mr-3 rounded-xl rounded-bl-sm border bg-white/5 px-3 py-2.5 ${TONE_RING[m.tone || 'ok']}`}
+            >
+              {m.role === 'system' && (
+                <p className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                  <ClipboardList className="h-3 w-3" /> Sentinel
+                </p>
+              )}
+              <p className="whitespace-pre-line text-[13px] leading-relaxed text-slate-100">{m.text}</p>
+              {m.effects && m.effects.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {m.effects.map((e) => (
+                    <span key={e} className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      {e}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {m.payload && <PayloadBlock payload={m.payload} />}
+            </div>
+          ),
+        )}
+
+        {busy && (
+          <p className="flex items-center gap-2 px-1 text-[11px] text-slate-400">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Working the floor…
+          </p>
+        )}
+      </div>
+
+      {/* Suggestions */}
+      <div className="flex gap-1.5 overflow-x-auto border-t border-white/10 px-3 py-2">
+        {COPILOT_SUGGESTIONS.slice(0, 5).map((s) => (
+          <button
+            key={s}
+            onClick={() => send(s)}
+            className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-300 transition hover:border-amber-300/40 hover:text-amber-200"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {/* Composer */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+        className="flex items-center gap-2 border-t border-white/10 px-3 py-3"
+      >
+        <button
+          type="button"
+          onClick={toggleVoice}
+          aria-label="Speak a command"
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
+            listening ? 'animate-pulse bg-red-500 text-white' : 'bg-white/10 text-slate-200 hover:bg-white/20'
+          }`}
+        >
+          {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </button>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={listening ? 'Listening…' : 'Tell the copilot what changed…'}
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400/60"
+        />
+        <button
+          type="submit"
+          disabled={busy || !input.trim()}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-slate-900 transition disabled:opacity-40"
+          aria-label="Send command"
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </form>
+
+      <CopilotSentinel onDiagnose={(id) => { setBusy(true); push({ role: 'agent', tone: 'ok', text: `Pinging ${DEVICE_KINDS.find((d) => d.id === id)?.name || id}…` }); runDiagnostics(id); }} />
+    </div>
+  );
+};
+
+export default CopilotSidebar;

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload, Lock,
+  Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload, Lock, Ban, Bot,
 } from 'lucide-react';
 import PageShell from '@/components/site/PageShell';
 import DeviceBar from '@/components/site/DeviceBar';
@@ -12,6 +12,7 @@ import { formatCents, formatTaxRate } from '@/data/platform';
 import { taxClass as taxClassDef } from '@/data/taxClasses';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeviceHealth } from '@/hooks/useDeviceHealth';
+import { useOps } from '@/lib/opsStore';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
 import { computeTax } from '@/lib/taxEngine';
 import type { LoadedMenu } from '@/lib/menuStore';
@@ -28,6 +29,9 @@ interface Line extends MenuItem {
 const POS: React.FC = () => {
   const { user } = useAuth();
   const { ordersBlocked, blockingDevices } = useDeviceHealth();
+  // Same shared floor state the Operator Copilot writes to: an item 86'd in the
+  // copilot is instantly unsellable here, and its price changes apply live.
+  const ops = useOps();
 
   const [loaded, setLoaded] = useState<LoadedMenu>(DEMO_LOADED_MENU);
   const [loading, setLoading] = useState(true);
@@ -57,30 +61,39 @@ const POS: React.FC = () => {
   }, [user?.id]);
 
   const items = useMemo(
-    () => loaded.items.filter((m) => m.category === category),
-    [loaded, category]
+    () =>
+      loaded.items
+        .filter((m) => m.category === category)
+        .map((m) => ({ ...m, price: ops.priceFor(m.name, m.price), off: ops.is86(m.name) })),
+    [loaded, category, ops.priceOverrides, ops.eightySixed],
   );
 
   // Tax is computed per line, per jurisdiction — state, county, city and any
   // special district, each with its own exemptions. Nothing is hardcoded.
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
+  const discount = Math.round(subtotal * (ops.discountPct / 100));
   const taxResult = useMemo(
     () =>
       computeTax(
-        lines.map((l) => ({ amount: l.price * l.qty, taxClass: l.taxClass })),
+        lines.map((l) => {
+          const gross = l.price * l.qty;
+          return { amount: gross - Math.round(gross * (ops.discountPct / 100)), taxClass: l.taxClass };
+        }),
         loaded.taxProfile,
       ),
-    [lines, loaded.taxProfile],
+    [lines, loaded.taxProfile, ops.discountPct],
   );
   const tax = taxResult.total;
-  const tip = Math.round(subtotal * (tipPct / 100));
-  const total = subtotal + tax + tip;
+  const tip = Math.round((subtotal - discount) * (tipPct / 100));
+  const total = subtotal - discount + tax + tip;
 
 
 
-  const add = (m: MenuItem) => {
+  const add = (m: MenuItem & { off?: boolean }) => {
     // Hard stop: a critical station is dark, so nothing new gets rung.
     if (ordersBlocked) return;
+    // 86'd by the copilot — the button is dead until it is restored.
+    if (m.off || ops.is86(m.name)) return;
     setLines((prev) => {
       const i = prev.findIndex((l) => l.id === m.id);
       if (i >= 0) {
@@ -199,21 +212,36 @@ const POS: React.FC = () => {
                       <button
                         key={m.id}
                         onClick={() => add(m)}
-                        disabled={ordersBlocked}
-                        className="flex min-h-[104px] flex-col justify-between rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 p-4 text-left transition active:scale-95"
+                        disabled={ordersBlocked || m.off}
+                        className={`relative flex min-h-[104px] flex-col justify-between rounded-2xl bg-gradient-to-br p-4 text-left transition active:scale-95 ${
+                          m.off
+                            ? 'cursor-not-allowed from-stone-300 to-stone-400 opacity-60'
+                            : 'from-stone-800 to-stone-900'
+                        }`}
                       >
-                        <span className="text-sm font-bold leading-snug text-white">{m.name}</span>
+                        <span className={`text-sm font-bold leading-snug ${m.off ? 'text-stone-700 line-through' : 'text-white'}`}>
+                          {m.name}
+                        </span>
                         <span className="mt-2 flex items-center justify-between">
-                          <span className="text-sm font-bold text-amber-400">{formatCents(m.price)}</span>
-                          {m.mods && m.mods.length > 0 && (
-                            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-stone-300">
-                              {m.mods.length} mods
+                          <span className={`text-sm font-bold ${m.off ? 'text-stone-600' : 'text-amber-400'}`}>
+                            {formatCents(m.price)}
+                          </span>
+                          {m.off ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                              <Ban className="h-3 w-3" /> 86&apos;d
                             </span>
+                          ) : (
+                            m.mods && m.mods.length > 0 && (
+                              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-stone-300">
+                                {m.mods.length} mods
+                              </span>
+                            )
                           )}
                         </span>
                       </button>
                     ))}
                   </div>
+
 
                   {ordersBlocked && (
                     <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/70 p-4 backdrop-blur-[2px]">
@@ -324,6 +352,17 @@ const POS: React.FC = () => {
 
             <div className="mt-4 space-y-1.5 border-t border-stone-200 pt-4 text-sm">
               <div className="flex justify-between text-stone-600"><span>Subtotal</span><span>{formatCents(subtotal)}</span></div>
+
+              {/* Copilot-run happy hour / flash discount, applied before tax */}
+              {discount > 0 && (
+                <div className="flex justify-between font-semibold text-emerald-700">
+                  <span className="inline-flex items-center gap-1">
+                    <Bot className="h-3.5 w-3.5" /> Copilot discount ({ops.discountPct}%)
+                  </span>
+                  <span>-{formatCents(discount)}</span>
+                </div>
+              )}
+
 
               {/* One line per jurisdiction the shop actually collects for */}
               {taxResult.lines.length === 0 ? (
