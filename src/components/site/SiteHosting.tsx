@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Globe, ShoppingBag, Clock, MapPin, ClipboardList, Share2, ImageIcon,
-  RefreshCw, Check, ArrowRight, Phone, Instagram, Facebook, Star, Camera, Bot,
+  RefreshCw, Check, ArrowRight, Phone, Instagram, Facebook, Star, Camera, Bot, Sparkles,
 } from 'lucide-react';
+
 
 import Reveal from '@/components/site/Reveal';
 import { askCopilot } from '@/components/site/CopilotDock';
@@ -294,6 +295,12 @@ const SiteHosting: React.FC = () => {
                 ))}
               </ul>
               <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Link
+                  to="/templates"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-sm font-extrabold text-white shadow"
+                >
+                  <Sparkles className="h-4 w-4" /> Templates, samples &amp; logo maker
+                </Link>
                 <button
                   onClick={() => askCopilot('Build my website page')}
                   className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-4 py-2.5 text-sm font-extrabold text-white shadow"
@@ -307,6 +314,7 @@ const SiteHosting: React.FC = () => {
                   Get this page built for me <ArrowRight className="h-4 w-4 animate-bob-x" />
                 </Link>
               </div>
+
             </div>
 
           </div>

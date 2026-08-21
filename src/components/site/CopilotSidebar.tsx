@@ -11,6 +11,8 @@ import CopilotSentinel from '@/components/site/CopilotSentinel';
 import CopilotKitCard from '@/components/site/CopilotKitCard';
 import CopilotHistory from '@/components/site/CopilotHistory';
 import BuildStatus from '@/components/site/BuildStatus';
+import SkillRoadmap from '@/components/site/SkillRoadmap';
+
 
 import { useDeviceHealth } from '@/hooks/useDeviceHealth';
 import { useAuth } from '@/contexts/AuthContext';
@@ -480,6 +482,11 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
         <BuildStatus tone="dark" />
       </div>
 
+      {/* ADK agent-skill roadmap — what the back end can run, in build order */}
+      <div className="max-h-64 overflow-y-auto border-b border-white/10 px-3 py-2.5">
+        <SkillRoadmap tone="dark" />
+      </div>
+
 
 
       {/* Live state chips */}
@@ -565,7 +572,12 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
               )}
               {m.kit && <CopilotKitCard kit={m.kit} />}
               {m.doc && <DocBlock doc={m.doc} />}
-              {m.payload && <PayloadBlock payload={m.payload} />}
+              {m.payload && (
+                <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-slate-950/70 p-2 text-[10px] leading-snug text-emerald-200">
+                  {JSON.stringify(m.payload, null, 2)}
+                </pre>
+              )}
+
 
             </div>
           ),

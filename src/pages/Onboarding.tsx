@@ -7,12 +7,16 @@ import {
 import PageShell from '@/components/site/PageShell';
 import SignupForm from '@/components/site/SignupForm';
 import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
+import SitePreview from '@/components/site/SitePreview';
+import VibeStudio from '@/components/site/VibeStudio';
 import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents, PLANS, HOSTING_DISCOUNT } from '@/data/platform';
-
+import { SITE_TEMPLATES } from '@/data/vibe';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { parseMenuFile, parseMenuText, saveParsedMenu, loadShopMenu } from '@/lib/menuStore';
+import { loadVibeBrief, saveVibeBrief, emptyBrief } from '@/lib/vibeStore';
 import type { ParsedMenu } from '@/lib/menuStore';
+
 
 
 const SAMPLE_MENU_TEXT = `NORTH BEND COFFEE & KITCHEN
@@ -57,6 +61,16 @@ const Onboarding: React.FC = () => {
   const [wantsSite, setWantsSite] = useState(true); // website hosting on by default
 
 
+  // ---- Vibe brief: the words, the matched template and the generated logo ----
+  const [vibeText, setVibeText] = useState('');
+  const [templateId, setTemplateId] = useState(SITE_TEMPLATES[0].id);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoPrompt, setLogoPrompt] = useState('');
+  const [logoStyle, setLogoStyle] = useState('');
+  const [logoSymbol, setLogoSymbol] = useState('');
+
+
+
   useEffect(() => {
     const t = params.get('type');
     if (t) {
@@ -88,6 +102,22 @@ const Onboarding: React.FC = () => {
       cancelled = true;
     };
   }, [user?.id]);
+
+  // Pull back any saved vibe brief for this shop.
+  useEffect(() => {
+    if (!savedShopId) return;
+    let cancelled = false;
+    loadVibeBrief(savedShopId).then((b) => {
+      if (cancelled || !b) return;
+      if (b.vibe_text) setVibeText(b.vibe_text);
+      if (b.template_id) setTemplateId(b.template_id);
+      if (b.logo_url) setLogoUrl(b.logo_url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [savedShopId]);
+
 
   const concept = useMemo(() => BUSINESS_TYPES.find((b) => b.id === type), [type]);
   const allItems = useMemo(
@@ -146,6 +176,25 @@ const Onboarding: React.FC = () => {
         menu,
       });
       setSavedShopId(id);
+
+      // Persist the vibe brief (template, logo, the owner's own words) too.
+      if (id) {
+        try {
+          await saveVibeBrief({
+            ...emptyBrief(id),
+            vibe_text: vibeText.trim() || null,
+            template_id: templateId,
+            logo_url: logoUrl,
+            logo_prompt: logoPrompt || null,
+            concept: type || menu.business_type || 'restaurant',
+            style: logoStyle || null,
+            symbol: logoSymbol || null,
+          });
+        } catch {
+          /* the menu is saved either way — the brief can be re-saved later */
+        }
+      }
+
       setStep(4);
     } catch (err: any) {
       setSaveError(err.message || 'Could not save your menu. Please try again.');
@@ -153,6 +202,7 @@ const Onboarding: React.FC = () => {
       setSaving(false);
     }
   };
+
 
   return (
     <PageShell>
@@ -416,24 +466,45 @@ const Onboarding: React.FC = () => {
                 <p className="mt-3 text-xs text-emerald-700">0% commission · Apple Pay · pickup windows</p>
               </div>
 
-              {/* Website preview */}
+              {/* Website preview — the real one page, in the picked template */}
               <div className="rounded-2xl border border-stone-200 bg-white p-5">
                 <p className="flex items-center gap-2 text-sm font-bold text-stone-900"><Globe className="h-4 w-4 text-amber-600" /> One-page website</p>
-                <div className="mt-4 overflow-hidden rounded-lg border border-stone-200">
-                  <div className="bg-stone-900 p-3">
-                    <p className="text-sm font-extrabold text-white">{shopName || menu.shop_name || 'Your Shop'}</p>
-                    <p className="text-[10px] text-amber-400">{concept?.label || 'Local favorite'} · Hours from Google</p>
-                  </div>
-                  <div className="space-y-1.5 p-3">
-                    {['Order online', 'Menu place cards', 'Hours & contact', 'Now hiring', 'Social links'].map((b) => (
-                      <p key={b} className="text-[10px] font-semibold text-stone-600">{b}</p>
-                    ))}
-                    <div className="mt-2 h-6 w-24 rounded bg-amber-500" />
-                  </div>
+                <div className="mt-4">
+                  <SitePreview
+                    templateId={templateId}
+                    shopName={shopName || menu.shop_name || 'Your Shop'}
+                    tagline={vibeText.trim() || concept?.blurb}
+                    logoUrl={logoUrl}
+                    items={allItems.slice(0, 4).map((i) => ({ name: i.name, price: i.price }))}
+                    socials={['Instagram', 'Facebook', 'Google Reviews']}
+                    compact
+                  />
                 </div>
                 <p className="mt-3 text-xs text-stone-500">Hosting, domain + SSL included on the ${PLANS[0].price} plan</p>
               </div>
             </div>
+
+            {/* Vibe + logo studio */}
+            <div className="mt-6">
+              <VibeStudio
+                shopName={shopName || menu.shop_name || 'Your Shop'}
+                concept={concept?.label || 'restaurant'}
+                items={allItems.slice(0, 4).map((i) => ({ name: i.name, price: i.price }))}
+                initialVibe={vibeText}
+                initialTemplateId={templateId}
+                initialLogo={logoUrl}
+                savedNote={savedShopId ? 'Saved to your shop.' : 'Saved once you save the menu.'}
+                onSave={(patch) => {
+                  if (patch.vibe_text !== undefined) setVibeText(patch.vibe_text || '');
+                  if (patch.template_id) setTemplateId(patch.template_id);
+                  if (patch.logo_url) setLogoUrl(patch.logo_url);
+                  if (patch.logo_prompt !== undefined) setLogoPrompt(patch.logo_prompt || '');
+                  if (patch.style) setLogoStyle(patch.style);
+                  if (patch.symbol) setLogoSymbol(patch.symbol);
+                }}
+              />
+            </div>
+
 
             {/* Website hosting choice */}
             <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/60 p-6">
