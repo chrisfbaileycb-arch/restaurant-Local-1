@@ -9,6 +9,8 @@ import SignupForm from '@/components/site/SignupForm';
 import CopilotDock, { askCopilot } from '@/components/site/CopilotDock';
 import SitePreview from '@/components/site/SitePreview';
 import VibeStudio from '@/components/site/VibeStudio';
+import MenuIntakeGuide from '@/components/site/MenuIntakeGuide';
+import MenuIntakeWizard from '@/components/site/MenuIntakeWizard';
 import { BUSINESS_TYPES, REWARD_PROGRAMS, LAUNCH_STEPS, formatCents, PLANS, HOSTING_DISCOUNT } from '@/data/platform';
 import { SITE_TEMPLATES } from '@/data/vibe';
 
@@ -61,13 +63,14 @@ const Onboarding: React.FC = () => {
   const [wantsSite, setWantsSite] = useState(true); // website hosting on by default
 
 
-  // ---- Vibe brief: the words, the matched template and the generated logo ----
+  // ---- Vibe brief: the words, the matched template, logo and tagline ----
   const [vibeText, setVibeText] = useState('');
   const [templateId, setTemplateId] = useState(SITE_TEMPLATES[0].id);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPrompt, setLogoPrompt] = useState('');
   const [logoStyle, setLogoStyle] = useState('');
   const [logoSymbol, setLogoSymbol] = useState('');
+  const [tagline, setTagline] = useState('');
 
 
 
@@ -186,10 +189,12 @@ const Onboarding: React.FC = () => {
             template_id: templateId,
             logo_url: logoUrl,
             logo_prompt: logoPrompt || null,
+            tagline: tagline.trim() || null,
             concept: type || menu.business_type || 'restaurant',
             style: logoStyle || null,
             symbol: logoSymbol || null,
           });
+
         } catch {
           /* the menu is saved either way — the brief can be re-saved later */
         }
@@ -324,10 +329,17 @@ const Onboarding: React.FC = () => {
         {/* STEP 2 */}
         {step === 2 && (
           <section>
-            <h2 className="text-2xl font-extrabold text-stone-900">Upload your menu</h2>
+            <h2 className="text-2xl font-extrabold text-stone-900">Build your menu — with the agent</h2>
             <p className="mt-2 text-stone-600">
-              A photo of your board, a PDF, a spreadsheet — anything. Our AI reads items, prices, sizes and modifiers.
+              Read the walkthrough first, get your sources together, then upload. The agent does the typing; you approve
+              every price, modifier and description before anything goes live.
             </p>
+
+            {/* Read this first — the honest workflow + what to bring */}
+            <div className="mt-6">
+              <MenuIntakeGuide onAsk={(q) => askCopilot(q)} onReady={() => askCopilot('Walk me through building my menu')} />
+            </div>
+
 
             <label className="group mt-6 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-fuchsia-300 bg-gradient-to-br from-fuchsia-50/60 via-white to-amber-50/60 p-12 text-center transition hover:-translate-y-0.5 hover:border-orange-400 hover:shadow-lg">
               <input
@@ -410,6 +422,21 @@ const Onboarding: React.FC = () => {
               </div>
             )}
 
+            {/* Bring your own sources + standard placement (agent-directed) */}
+            <div className="mt-6">
+              <MenuIntakeWizard
+                menu={menu}
+                businessType={type || menu?.business_type || ''}
+                onMenu={(next, label) => {
+                  setMenu(next);
+                  setFileName((f) => (f ? `${f} + ${label}` : label));
+                  if (!shopName && next.shop_name) setShopName(next.shop_name);
+                }}
+                onAsk={(q) => askCopilot(q)}
+              />
+            </div>
+
+
             <div className="mt-6 flex gap-3">
               <button onClick={() => setStep(1)} className="inline-flex items-center gap-2 rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">
                 <ArrowLeft className="h-4 w-4" /> Back
@@ -484,15 +511,23 @@ const Onboarding: React.FC = () => {
               </div>
             </div>
 
-            {/* Vibe + logo studio */}
+            {/* Vibe + logo + copy studio */}
             <div className="mt-6">
               <VibeStudio
                 shopName={shopName || menu.shop_name || 'Your Shop'}
                 concept={concept?.label || 'restaurant'}
                 items={allItems.slice(0, 4).map((i) => ({ name: i.name, price: i.price }))}
+                shopId={savedShopId}
+                menuItems={allItems.map((i) => ({
+                  name: i.name,
+                  category: i.category,
+                  price: i.price,
+                  description: i.description || '',
+                }))}
                 initialVibe={vibeText}
                 initialTemplateId={templateId}
                 initialLogo={logoUrl}
+                initialTagline={tagline}
                 savedNote={savedShopId ? 'Saved to your shop.' : 'Saved once you save the menu.'}
                 onSave={(patch) => {
                   if (patch.vibe_text !== undefined) setVibeText(patch.vibe_text || '');
@@ -501,9 +536,11 @@ const Onboarding: React.FC = () => {
                   if (patch.logo_prompt !== undefined) setLogoPrompt(patch.logo_prompt || '');
                   if (patch.style) setLogoStyle(patch.style);
                   if (patch.symbol) setLogoSymbol(patch.symbol);
+                  if (patch.tagline !== undefined) setTagline(patch.tagline || '');
                 }}
               />
             </div>
+
 
 
             {/* Website hosting choice */}

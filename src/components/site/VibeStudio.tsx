@@ -3,20 +3,27 @@ import { Sparkles, Wand2, Check, Loader2 } from 'lucide-react';
 
 import SitePreview from '@/components/site/SitePreview';
 import LogoCreator from '@/components/site/LogoCreator';
+import CopyWriter from '@/components/site/CopyWriter';
 import { SITE_TEMPLATES, matchTemplate, templateById, PAGE_JOBS } from '@/data/vibe';
 import type { PreviewItem } from '@/components/site/SitePreview';
+import type { CopyRequestItem } from '@/lib/copyStore';
 
 interface Props {
   shopName: string;
   concept?: string;
   items: PreviewItem[];
   socials?: string[];
+  /** the shop these edits belong to — enables saving copy straight to menu_items */
+  shopId?: string | null;
+  /** the full parsed menu, used by the copy writer */
+  menuItems?: CopyRequestItem[];
   /** initial saved values */
   initialVibe?: string | null;
   initialTemplateId?: string | null;
   initialLogo?: string | null;
+  initialTagline?: string | null;
   /** persist — the parent decides where it goes (onboarding vs dashboard) */
-  onSave?: (patch: { vibe_text?: string; template_id?: string; logo_url?: string; logo_prompt?: string; style?: string; symbol?: string }) => void;
+  onSave?: (patch: { vibe_text?: string; template_id?: string; logo_url?: string; logo_prompt?: string; style?: string; symbol?: string; tagline?: string }) => void;
   saving?: boolean;
   savedNote?: string;
 }
@@ -28,11 +35,12 @@ interface Props {
  */
 const VibeStudio: React.FC<Props> = ({
   shopName, concept = 'restaurant', items, socials = ['Instagram', 'Facebook', 'Google Reviews'],
-  initialVibe, initialTemplateId, initialLogo, onSave, saving, savedNote,
+  shopId, menuItems = [], initialVibe, initialTemplateId, initialLogo, initialTagline, onSave, saving, savedNote,
 }) => {
   const [vibe, setVibe] = useState(initialVibe || '');
   const [templateId, setTemplateId] = useState(initialTemplateId || SITE_TEMPLATES[0].id);
   const [logo, setLogo] = useState<string | null>(initialLogo || null);
+  const [tagline, setTagline] = useState(initialTagline || '');
   const [matched, setMatched] = useState<{ hits: string[]; name: string } | null>(null);
 
   const template = useMemo(() => templateById(templateId), [templateId]);
@@ -124,7 +132,7 @@ const VibeStudio: React.FC<Props> = ({
           <SitePreview
             template={template}
             shopName={shopName || 'Your Shop'}
-            tagline={vibe.trim() || template.vibe}
+            tagline={tagline.trim() || vibe.trim() || template.vibe}
             logoUrl={logo}
             items={items}
             socials={socials}
@@ -153,6 +161,20 @@ const VibeStudio: React.FC<Props> = ({
               ))}
             </ul>
           </div>
+
+          {/* brand.writeCopy — descriptions + tagline in the owner's voice */}
+          <CopyWriter
+            shopId={shopId}
+            shopName={shopName || 'Your Shop'}
+            concept={concept}
+            vibeText={vibe}
+            templateName={template.name}
+            items={menuItems}
+            onTagline={(t) => {
+              setTagline(t);
+              onSave?.({ tagline: t });
+            }}
+          />
 
           <LogoCreator
             shopName={shopName}

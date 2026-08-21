@@ -104,6 +104,56 @@ export const parseMenuText = async (text: string, fileName = 'menu.txt') => {
   return data as ParsedMenu;
 };
 
+/**
+ * menu.ingestUrl — read a menu PDF link or a live website menu page.
+ * Returns the same ParsedMenu shape as an upload.
+ */
+export const ingestMenuUrl = async (url: string, kind: 'pdf-url' | 'website' = 'website') => {
+  const { data, error } = await supabase.functions.invoke('ingest-url', { body: { url, kind } });
+  if (error) throw new Error(error.message || 'Could not read that link');
+  if (!data?.success) throw new Error(data?.error || 'No menu items were found at that link.');
+  return data as ParsedMenu;
+};
+
+/** Merge a pasted global modifier list onto every item that has none of its own. */
+export const applyGlobalModifiers = (menu: ParsedMenu, modifiers: string[]): ParsedMenu => {
+  const clean = modifiers.map((m) => m.trim()).filter(Boolean).slice(0, 40);
+  if (clean.length === 0) return menu;
+  return {
+    ...menu,
+    categories: menu.categories.map((c) => ({
+      ...c,
+      items: c.items.map((i) => ({
+        ...i,
+        modifiers: Array.from(new Set([...(i.modifiers || []), ...clean])),
+      })),
+    })),
+  };
+};
+
+/** Combine two parsed menus (e.g. a PDF plus items the owner typed in). */
+export const mergeParsedMenus = (base: ParsedMenu | null, add: ParsedMenu): ParsedMenu => {
+  if (!base) return add;
+  const categories = [...base.categories.map((c) => ({ ...c, items: [...c.items] }))];
+  add.categories.forEach((c) => {
+    const hit = categories.find((x) => x.name.toLowerCase() === c.name.toLowerCase());
+    if (hit) {
+      c.items.forEach((i) => {
+        if (!hit.items.some((e) => e.name.toLowerCase() === i.name.toLowerCase())) hit.items.push(i);
+      });
+    } else {
+      categories.push({ ...c, items: [...c.items] });
+    }
+  });
+  return {
+    shop_name: base.shop_name || add.shop_name || null,
+    business_type: base.business_type || add.business_type || null,
+    categories,
+    itemCount: categories.reduce((s, c) => s + c.items.length, 0),
+  };
+};
+
+
 interface SaveArgs {
   ownerId?: string | null;
   ownerEmail?: string | null;
