@@ -245,7 +245,7 @@ export const PLANS: Plan[] = [
   {
     id: 'pos-web',
     name: 'POS + Website',
-    price: 149,
+    price: 199,
     setup: 299,
     deposit: SETUP_DEPOSIT,
     balance: 199,
@@ -266,7 +266,7 @@ export const PLANS: Plan[] = [
   {
     id: 'pos-only',
     name: 'POS Only',
-    price: 99,
+    price: 149,
     setup: 249,
     deposit: SETUP_DEPOSIT,
     balance: 149,

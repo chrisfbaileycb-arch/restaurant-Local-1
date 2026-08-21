@@ -13,7 +13,8 @@ const PLATFORM_LINKS = [
   { to: '/#devices', label: 'Devices' },
   { to: '/#failover', label: 'Stay open offline' },
   { to: '/#website', label: 'Website hosting' },
-  { to: '/#pricing', label: 'Pricing' },
+
+
   { to: '/shop', label: 'Hardware shop' },
 ];
 
