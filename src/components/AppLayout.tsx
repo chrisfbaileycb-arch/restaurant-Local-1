@@ -20,6 +20,10 @@ import DeviceHub from '@/components/site/DeviceHub';
 import Failover from '@/components/site/Failover';
 import Pricing from '@/components/site/Pricing';
 import ZeroHardware from '@/components/site/ZeroHardware';
+import OperatorCopilot, { runCopilotWorkflow } from '@/components/copilot/OperatorCopilot';
+import { COPILOT_WORKFLOWS } from '@/components/copilot/CopilotWorkflows';
+import { CONCEPT_PRESETS } from '@/data/vibe';
+
 
 
 
@@ -422,6 +426,86 @@ const AppLayout: React.FC = () => {
 
       {/* ---------------- CONNECTIVITY FAILOVER / PHONE PIVOT ---------------- */}
       <Failover />
+
+      {/* ---------------- COPILOT WORKFLOWS + WEBSITE TEMPLATES ---------------- */}
+      <section className="bg-gradient-to-b from-white to-fuchsia-50 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <Reveal className="text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-600 to-orange-500 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
+              <Bot className="h-3.5 w-3.5" /> Operator Copilot workflows
+            </span>
+            <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">
+              It does not just answer. It runs the chain.
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+              Four hardwired action chains behind the copilot button in the corner of every screen — build &amp;
+              ingestion, daily closeout, table pings and a full hardware self-test.
+            </p>
+          </Reveal>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {COPILOT_WORKFLOWS.map((w, i) => (
+              <Reveal key={w.id} delay={i * 70}>
+                <button
+                  onClick={() => runCopilotWorkflow(w.id)}
+                  className="hover-lift flex h-full w-full flex-col rounded-2xl border border-white bg-white p-5 text-left shadow-sm"
+                >
+                  <span className={`mb-3 block h-1.5 w-12 rounded-full bg-gradient-to-r ${w.tone}`} />
+                  <h3 className="font-extrabold text-slate-900">{w.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600">{w.purpose}</p>
+                  <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-fuchsia-600">
+                    {w.steps.length} steps · run it now
+                  </p>
+                </button>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={140} className="mt-10 grid gap-8 rounded-3xl border border-fuchsia-200 bg-white p-7 lg:grid-cols-[1.05fr_.95fr] lg:p-10">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
+                <Globe className="h-3.5 w-3.5" /> One-page website templates
+              </span>
+              <h3 className="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">
+                Your menu builds the customer page too.
+              </h3>
+              <p className="mt-3 max-w-xl text-slate-700">
+                Hero and order header, live ordering grid with quick-add, photo place cards, Google-synced hours, map
+                and directions, a hiring form and your socials — themed automatically for your concept.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  to="/templates-logo"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-6 py-3.5 font-extrabold text-white shadow-lg transition hover:scale-[1.03]"
+                >
+                  Open templates &amp; logo <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/templates"
+                  className="rounded-xl border-2 border-violet-300 px-6 py-3.5 font-bold text-violet-700 transition hover:bg-violet-50"
+                >
+                  See sample sites
+                </Link>
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {CONCEPT_PRESETS.map((c) => (
+                <Link
+                  key={c.id}
+                  to="/templates-logo"
+                  className="hover-lift rounded-xl border border-fuchsia-100 bg-fuchsia-50/60 p-3"
+                >
+                  <span className="block text-sm font-extrabold text-slate-900">
+                    {BUSINESS_TYPES.find((b) => b.id === c.id)?.label || c.id}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-slate-600">{c.cta}</span>
+                </Link>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
 
       {/* ---------------- WEEKEND TEST RUN ---------------- */}
       <section className="bg-white py-16">
@@ -895,6 +979,8 @@ const AppLayout: React.FC = () => {
       </section>
 
       <Footer />
+      <OperatorCopilot mode="floor" />
+
     </div>
   );
 };

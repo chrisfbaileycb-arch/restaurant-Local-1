@@ -23,6 +23,8 @@ import Templates from "./pages/Templates";
 import Devices from "./pages/Devices";
 import StayOpenOffline from "./pages/StayOpenOffline";
 import TestRun from "./pages/TestRun";
+import TemplatesAndLogo from "./pages/TemplatesAndLogo";
+
 
 
 const queryClient = new QueryClient();
@@ -44,8 +46,11 @@ const App = () => (
                 <Route path="/devices" element={<Devices />} />
                 <Route path="/stay-open-offline" element={<StayOpenOffline />} />
                 <Route path="/templates" element={<Templates />} />
+                <Route path="/templates-logo" element={<TemplatesAndLogo />} />
+                <Route path="/website-templates" element={<TemplatesAndLogo />} />
                 <Route path="/test-run" element={<TestRun />} />
                 <Route path="/weekend-test" element={<TestRun />} />
+
 
                 <Route path="/collections/:handle" element={<CollectionPage />} />
                 <Route path="/products/:handle" element={<ProductDetail />} />

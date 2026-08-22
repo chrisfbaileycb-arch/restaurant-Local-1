@@ -501,3 +501,96 @@ export const skillsByStatus = (status: SkillStatus) => AGENT_SKILLS.filter((s) =
 
 /** The ordered roadmap: everything not already live, in dependency order. */
 export const SKILL_ROADMAP = AGENT_SKILLS.filter((s) => s.status !== 'live');
+
+// ---------------- Concept theme engine ----------------
+// One preset per business type in BUSINESS_TYPES (platform.ts). Picks the
+// template, the order button wording, the nav tabs on the generated page
+// and the sample content to preview it with. Single source of truth for
+// the one-page site generator and the /templates-logo studio.
+
+export interface ConceptPreset {
+  /** matches BusinessType.id in @/data/platform */
+  id: string;
+  templateId: string;
+  /** wording on the primary order button */
+  cta: string;
+  /** category nav tabs rendered under the hero */
+  tabs: string[];
+  /** what the layout optimises for */
+  focus: string;
+  /** which SAMPLE_PAGES entry previews it */
+  samplePageId: string;
+}
+
+export const CONCEPT_PRESETS: ConceptPreset[] = [
+  {
+    id: 'restaurant',
+    templateId: 'warm-diner',
+    cta: 'Order now — 0% commission',
+    tabs: ['Order Online', 'Menu Cards', 'Hours', 'Contact', 'Hiring'],
+    focus: 'Full menu categories, table tabs and a reservations hook.',
+    samplePageId: 'riverside',
+  },
+  {
+    id: 'food-truck',
+    templateId: 'street-bold',
+    cta: 'Order ahead for pickup',
+    tabs: ['Order Online', 'Find the truck', 'Hours', 'Contact'],
+    focus: 'Curbside pickup first, with the LTE/GPS location tracker up top.',
+    samplePageId: 'vega',
+  },
+  {
+    id: 'bakery',
+    templateId: 'clean-cafe',
+    cta: 'Order pickup',
+    tabs: ['Order Online', 'Cases today', 'Hours', 'Contact', 'Hiring'],
+    focus: 'Case items and pre-orders, cakes by the slice or whole.',
+    samplePageId: 'northbend',
+  },
+  {
+    id: 'coffee',
+    templateId: 'clean-cafe',
+    cta: 'Start my order',
+    tabs: ['Order Online', 'Menu Cards', 'Hours', 'Contact', 'Hiring'],
+    focus: 'Quick add with milk and size modifiers, morning-rush layout.',
+    samplePageId: 'northbend',
+  },
+  {
+    id: 'ice-cream',
+    templateId: 'sweet-shop',
+    cta: 'Order a scoop',
+    tabs: ['Order Online', 'Flavors', 'Hours', 'Contact'],
+    focus: 'Scoops, cones and toppings as tap-to-build options.',
+    samplePageId: 'warmbatch',
+  },
+  {
+    id: 'cookie',
+    templateId: 'sweet-shop',
+    cta: 'Order a box',
+    tabs: ['Order Online', 'Menu Cards', 'Hours', 'Contact'],
+    focus: 'Boxes and dozens bundled ahead of singles.',
+    samplePageId: 'warmbatch',
+  },
+  {
+    id: 'smoothie',
+    templateId: 'clean-cafe',
+    cta: 'Build my smoothie',
+    tabs: ['Order Online', 'Builds & boosts', 'Hours', 'Contact'],
+    focus: 'Builds, boosts, bowls and sizes stacked as modifiers.',
+    samplePageId: 'northbend',
+  },
+  {
+    id: 'beer-wine',
+    templateId: 'night-bar',
+    cta: 'See what is on tap',
+    tabs: ['Order Online', 'Draft list', 'Hours', 'Contact'],
+    focus: 'Short lists, draft taps, by-the-glass and by-the-bottle.',
+    samplePageId: 'riverside',
+  },
+];
+
+export const conceptPreset = (id?: string | null): ConceptPreset =>
+  CONCEPT_PRESETS.find((c) => c.id === id) || CONCEPT_PRESETS[0];
+
+export const sampleById = (id?: string | null): SamplePage =>
+  SAMPLE_PAGES.find((s) => s.id === id) || SAMPLE_PAGES[0];
