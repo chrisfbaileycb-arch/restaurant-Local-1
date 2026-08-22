@@ -58,6 +58,8 @@ const AppLayout: React.FC = () => {
   const { user } = useAuth();
   const ops = useOps();
   const [featured, setFeatured] = useState<any[]>([]);
+  const [featuredLoaded, setFeaturedLoaded] = useState(false);
+
   const [volume, setVolume] = useState(45000);
   const [ticket, setTicket] = useState(14);
   const [reportFilter, setReportFilter] = useState<'All' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly'>('All');
@@ -104,8 +106,13 @@ const AppLayout: React.FC = () => {
       .eq('status', 'active')
       .contains('tags', ['featured'])
       .limit(8)
-      .then(({ data }) => setFeatured(data || []));
+      .then(({ data, error }) => {
+        if (error) console.error('Featured hardware failed to load:', error.message);
+        setFeatured(data || []);
+        setFeaturedLoaded(true);
+      });
   }, []);
+
 
   useEffect(() => {
     loadShopMenu(user?.id || null)
@@ -618,11 +625,28 @@ const AppLayout: React.FC = () => {
             Shop all <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        {featured.length === 0 ? (
+        {!featuredLoaded ? (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="h-80 animate-pulse rounded-2xl bg-amber-100" />
             ))}
+          </div>
+        ) : featured.length === 0 ? (
+          /* Catalog is empty or unreachable — never leave shoppers staring at
+             skeletons forever. Send them straight to the full shop instead. */
+          <div className="mt-8 rounded-2xl border-2 border-dashed border-orange-200 bg-white p-10 text-center">
+            <Package className="mx-auto h-8 w-8 text-orange-400" />
+            <p className="mt-3 font-extrabold text-slate-900">The hardware catalog is being restocked</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
+              Every device below in the Device Hub is still available. Browse the full list and we will ship it
+              pre-loaded with your menu.
+            </p>
+            <Link
+              to="/shop"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-orange-500 px-6 py-3 font-extrabold text-white transition hover:scale-[1.03]"
+            >
+              Shop all hardware <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         ) : (
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -633,6 +657,7 @@ const AppLayout: React.FC = () => {
             ))}
           </div>
         )}
+
         <div className="mt-8 sm:hidden">
           <Link to="/shop" className="block rounded-xl border-2 border-orange-200 py-3 text-center font-bold text-orange-600">
             Shop all hardware

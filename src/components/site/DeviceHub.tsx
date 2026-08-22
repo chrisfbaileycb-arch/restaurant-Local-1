@@ -33,7 +33,8 @@ const DeviceHub: React.FC = () => {
       .from('ecom_products')
       .select('handle, name, price, images')
       .in('handle', handles)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error('Device gear failed to load:', error.message);
         const map: Record<string, { name: string; price: number; handle: string; image?: string }> = {};
         (data || []).forEach((p: any) => {
           map[p.handle] = { name: p.name, price: p.price, handle: p.handle, image: p.images?.[0] };
@@ -43,6 +44,7 @@ const DeviceHub: React.FC = () => {
   }, []);
 
   const matched = device.handles.map((h) => gear[h]).filter(Boolean);
+
 
   return (
     <section id="devices" className="relative overflow-hidden bg-slate-950 py-16">
