@@ -41,8 +41,9 @@ const Templates: React.FC = () => {
   };
 
   return (
-    <PageShell>
-      <CopilotDock mode="build" />
+    <PageShell copilot={false}>
+      <CopilotDock mode="website" />
+
 
       {/* Hero */}
       <section className="border-b border-orange-100 bg-gradient-to-b from-amber-50 to-white py-14">

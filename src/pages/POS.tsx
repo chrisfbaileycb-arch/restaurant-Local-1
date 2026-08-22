@@ -134,7 +134,8 @@ const POS: React.FC = () => {
 
 
   return (
-    <PageShell>
+    <PageShell copilot={false}>
+
       {/* Copilot on the register: 86s, splits, comps, close and hardware pings */}
       <CopilotDock mode="floor" menu={loaded} />
 
@@ -505,7 +506,8 @@ const POS: React.FC = () => {
           <div className="mt-4 flex flex-wrap gap-3">
             <Link to="/onboarding" className="rounded-xl bg-stone-900 px-5 py-3 font-semibold text-white">Upload my menu</Link>
             <Link to="/dashboard" className="rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">See the reports</Link>
-            <Link to="/collections/pos-terminals" className="rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">Shop terminals</Link>
+            <Link to="/collections/terminals" className="rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">Shop terminals</Link>
+
           </div>
         </div>
 

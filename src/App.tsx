@@ -20,6 +20,8 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import StarterKit from "./pages/StarterKit";
 import Templates from "./pages/Templates";
+import Devices from "./pages/Devices";
+import StayOpenOffline from "./pages/StayOpenOffline";
 
 
 const queryClient = new QueryClient();
@@ -37,6 +39,9 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/starter" element={<StarterKit />} />
+                <Route path="/starter-kit" element={<StarterKit />} />
+                <Route path="/devices" element={<Devices />} />
+                <Route path="/stay-open-offline" element={<StayOpenOffline />} />
                 <Route path="/templates" element={<Templates />} />
 
                 <Route path="/collections/:handle" element={<CollectionPage />} />

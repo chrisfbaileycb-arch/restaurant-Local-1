@@ -210,7 +210,8 @@ const Onboarding: React.FC = () => {
 
 
   return (
-    <PageShell>
+    <PageShell copilot={false}>
+
       {/* Build copilot: helps lay out the site, wire ordering and pick gear */}
       <CopilotDock mode="website" />
 

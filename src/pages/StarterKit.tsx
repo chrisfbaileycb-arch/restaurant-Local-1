@@ -78,7 +78,8 @@ const StarterKit: React.FC = () => {
   }, []);
 
   return (
-    <PageShell>
+    <PageShell copilot={false}>
+
       {/* Gear copilot: specs a kit to your concept and budget */}
       <CopilotDock mode="equipment" />
 

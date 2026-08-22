@@ -994,7 +994,7 @@ export const DEVICE_KINDS: DeviceKind[] = [
     icon: 'Scale',
     connection: 'USB',
     tone: 'from-orange-500 to-red-500',
-    handles: [],
+    handles: ['countertop-weight-scale'],
     blurb: 'For anything sold by the pound — candy, coffee beans, hot bar. Price calculates itself into the ticket.',
     actions: [
       { id: 'read', label: 'Read weight', command: 'get(weight)', result: '0.84 lb · $10.08 at $12.00/lb added to the ticket' },
