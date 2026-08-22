@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Monitor, ShoppingBag, Globe, Gift, CalendarDays, BarChart3, CreditCard, Package,
   ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck, Wallet, Heart, Bot,
+  ClipboardCheck,
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
@@ -28,6 +29,7 @@ import {
   SETUP_DEPOSIT, PLANS, calcProcessingCost, formatMoney,
 
 } from '@/data/platform';
+import { TEST_RUN_PATHWAYS, TOTAL_MINUTES } from '@/data/testRun';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
@@ -420,6 +422,77 @@ const AppLayout: React.FC = () => {
 
       {/* ---------------- CONNECTIVITY FAILOVER / PHONE PIVOT ---------------- */}
       <Failover />
+
+      {/* ---------------- WEEKEND TEST RUN ---------------- */}
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <Reveal className="grid gap-8 rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-amber-50 p-7 lg:grid-cols-[1.05fr_.95fr] lg:p-10">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
+                <ClipboardCheck className="h-3.5 w-3.5" /> Weekend test run
+              </span>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">
+                Take it to your restaurant and break it on purpose.
+              </h2>
+              <p className="mt-3 max-w-xl text-slate-700">
+                Eight pathways in the order you walk them — build the store from your real menu, publish the site, ring
+                a ticket, hand it to untrained staff, fire the kitchen printer, unplug the router mid-service, order
+                from a customer phone, then close the day and match the drawer.
+              </p>
+              <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+                {[
+                  'Live pre-flight against your real data',
+                  'Checkboxes that survive a refresh',
+                  'Printable runbook for the counter',
+                  'What to carry in the door',
+                  'Go / no-go signals per pathway',
+                  'Punch list you bring back to the copilot',
+                ].map((b) => (
+                  <li key={b} className="flex items-start gap-2 text-sm text-slate-800">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" /> {b}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link
+                  to="/test-run"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-6 py-3.5 font-extrabold text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-[1.03]"
+                >
+                  Open the runbook <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/devices"
+                  className="rounded-xl border-2 border-violet-300 bg-white px-6 py-3.5 font-bold text-violet-700 transition hover:bg-violet-50"
+                >
+                  Check my devices first
+                </Link>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              {TEST_RUN_PATHWAYS.slice(0, 4).map((p) => (
+                <Link
+                  key={p.id}
+                  to="/test-run"
+                  className="hover-lift flex items-start justify-between gap-4 rounded-2xl border border-white bg-white p-4 shadow-sm"
+                >
+                  <span>
+                    <span className="block font-extrabold text-slate-900">{p.title}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500">{p.where}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-700">
+                    {p.minutes}m
+                  </span>
+                </Link>
+              ))}
+              <p className="text-center text-xs text-slate-500">
+                {TEST_RUN_PATHWAYS.length} pathways · about {Math.round(TOTAL_MINUTES / 60)}h {TOTAL_MINUTES % 60}m
+                end to end.
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
 
       {/* ---------------- ZERO-HARDWARE CHECKOUT ---------------- */}
       <section className="bg-white py-16">
