@@ -62,6 +62,9 @@ const Footer: React.FC = () => {
             <ul className="space-y-2 text-sm">
               <li><Link className="hover:text-amber-400" to="/onboarding">Menu-to-store builder</Link></li>
               <li><Link className="hover:text-amber-400" to="/pos">Touchscreen POS</Link></li>
+              <li><Link className="hover:text-amber-400" to="/devices">Devices &amp; equipment</Link></li>
+              <li><Link className="hover:text-amber-400" to="/stay-open-offline">Stay open offline</Link></li>
+
               <li><Link className="hover:text-amber-400" to="/dashboard">Reporting suite</Link></li>
               <li><Link className="hover:text-amber-400" to="/dashboard">Employee scheduling</Link></li>
               <li><Link className="hover:text-amber-400" to="/dashboard">Rewards programs</Link></li>

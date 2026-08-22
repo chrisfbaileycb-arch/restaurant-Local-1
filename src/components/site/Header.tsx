@@ -11,10 +11,11 @@ const PLATFORM_LINKS = [
   { to: '/onboarding', label: 'Build my store' },
   { to: '/templates', label: 'Templates & logo' },
   { to: '/pos', label: 'POS demo' },
-  { to: '/#devices', label: 'Devices' },
-  { to: '/#failover', label: 'Stay open offline' },
+  { to: '/devices', label: 'Devices' },
+  { to: '/stay-open-offline', label: 'Stay open offline' },
   { to: '/shop', label: 'Hardware shop' },
 ];
+
 
 
 
