@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Menu, X, ChevronDown, LogOut, Heart } from 'lucide-react';
 
-import { supabase } from '@/lib/supabase';
+import { fetchCollections, FALLBACK_COLLECTIONS, type CatalogCollection } from '@/lib/catalog';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+
 
 
 const PLATFORM_LINKS = [
@@ -29,18 +30,20 @@ const Header: React.FC = () => {
   const { count } = useCart();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [collections, setCollections] = useState<any[]>([]);
+  const [collections, setCollections] = useState<CatalogCollection[]>(FALLBACK_COLLECTIONS);
   const [openShop, setOpenShop] = useState(false);
   const [mobile, setMobile] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from('ecom_collections')
-      .select('id, title, handle')
-      .eq('is_visible', true)
-      .order('title')
-      .then(({ data }) => setCollections(data || []));
+    let alive = true;
+    fetchCollections().then((rows) => {
+      if (alive && rows.length > 0) setCollections(rows);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
 
   return (
     <header className="sticky top-0 z-50 border-b border-orange-100 bg-white/90 backdrop-blur-md">

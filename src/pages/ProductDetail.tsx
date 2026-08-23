@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Truck, ShieldCheck, Check, Minus, Plus } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { fetchProductByHandle, fetchActiveProducts } from '@/lib/catalog';
 import PageShell from '@/components/site/PageShell';
 import ProductCard from '@/components/ProductCard';
 import { formatCents } from '@/data/platform';
@@ -21,6 +21,7 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let alive = true;
     const load = async () => {
       if (!handle) return;
       setLoading(true);
@@ -30,23 +31,11 @@ const ProductDetail: React.FC = () => {
       setActiveImage(0);
       setAdded(false);
 
-      const { data } = await supabase
-        .from('ecom_products')
-        .select('*, variants:ecom_product_variants(*)')
-        .eq('handle', handle)
-        .single();
+      const data = await fetchProductByHandle(handle);
+      if (!alive) return;
 
       if (data) {
-        let variants = data.variants || [];
-        if (data.has_variants && variants.length === 0) {
-          const { data: vd } = await supabase
-            .from('ecom_product_variants')
-            .select('*')
-            .eq('product_id', data.id)
-            .order('position');
-          variants = vd || [];
-          data.variants = variants;
-        }
+        const variants = data.variants || [];
         setProduct(data);
         if (variants.length > 0) {
           const sorted = [...variants].sort((a: any, b: any) => (a.position || 0) - (b.position || 0));
@@ -55,20 +44,20 @@ const ProductDetail: React.FC = () => {
           setSelectedOption(first?.option1 || '');
         }
 
-        const { data: rel } = await supabase
-          .from('ecom_products')
-          .select('*, variants:ecom_product_variants(*)')
-          .eq('status', 'active')
-          .neq('id', data.id)
-          .limit(4);
-        setRelated(rel || []);
+        const all = await fetchActiveProducts();
+        if (!alive) return;
+        setRelated(all.filter((p) => p.id !== data.id && p.handle !== data.handle).slice(0, 4));
       } else {
         setProduct(null);
       }
       setLoading(false);
     };
     load();
+    return () => {
+      alive = false;
+    };
   }, [handle]);
+
 
   const variantOptions: string[] = Array.from(
     new Set((product?.variants || []).map((v: any) => v.option1).filter(Boolean))

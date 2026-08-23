@@ -8,10 +8,11 @@ import {
 import Reveal from '@/components/site/Reveal';
 import { Pointer } from '@/components/site/Pointer';
 import { useDevices } from '@/hooks/useDevices';
-import { supabase } from '@/lib/supabase';
+import { fetchProductsByHandles } from '@/lib/catalog';
 import {
   DEVICE_KINDS, DEVICE_PROMISE, HEALTH_CHECK, HEALTH_RULES, formatCents, type DeviceKindId,
 } from '@/data/platform';
+
 
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -27,21 +28,22 @@ const DeviceHub: React.FC = () => {
   const Icon = ICONS[device.icon] || Printer;
 
   useEffect(() => {
+    let alive = true;
     const handles = DEVICE_KINDS.flatMap((d) => d.handles);
     if (handles.length === 0) return;
-    supabase
-      .from('ecom_products')
-      .select('handle, name, price, images')
-      .in('handle', handles)
-      .then(({ data, error }) => {
-        if (error) console.error('Device gear failed to load:', error.message);
-        const map: Record<string, { name: string; price: number; handle: string; image?: string }> = {};
-        (data || []).forEach((p: any) => {
-          map[p.handle] = { name: p.name, price: p.price, handle: p.handle, image: p.images?.[0] };
-        });
-        setGear(map);
+    fetchProductsByHandles(handles).then((rows) => {
+      if (!alive) return;
+      const map: Record<string, { name: string; price: number; handle: string; image?: string }> = {};
+      rows.forEach((p) => {
+        map[p.handle] = { name: p.name, price: p.price, handle: p.handle, image: p.images?.[0] };
       });
+      setGear(map);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
 
   const matched = device.handles.map((h) => gear[h]).filter(Boolean);
 

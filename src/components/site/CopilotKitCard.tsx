@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, X, Loader2, Truck, ArrowRight } from 'lucide-react';
 
-import { supabase } from '@/lib/supabase';
+import { fetchProductsByHandles } from '@/lib/catalog';
 import { useCart } from '@/contexts/CartContext';
 import { formatCents } from '@/data/platform';
 
@@ -16,7 +16,7 @@ export interface KitSuggestion {
 
 /**
  * The equipment copilot's answer, rendered as a real buildable cart:
- * live products from ecom_products, a running total, remove-before-you-buy
+ * live products from the catalog layer, a running total, remove-before-you-buy
  * and one button that pushes the whole kit into the cart and heads to checkout.
  */
 const CopilotKitCard: React.FC<{ kit: KitSuggestion }> = ({ kit }) => {
@@ -29,24 +29,19 @@ const CopilotKitCard: React.FC<{ kit: KitSuggestion }> = ({ kit }) => {
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      const { data } = await supabase
-        .from('ecom_products')
-        .select('id, name, handle, price, sku, images, product_type')
-        .in('handle', kit.handles)
-        .eq('status', 'active');
+    fetchProductsByHandles(kit.handles).then((rows) => {
       if (cancelled) return;
       // keep the plan's own order
-      const ordered = kit.handles.map((h) => (data || []).find((p: any) => p.handle === h)).filter(Boolean);
+      const ordered = kit.handles.map((h) => rows.find((p) => p.handle === h)).filter(Boolean);
       setProducts(ordered as any[]);
       setLoading(false);
-    };
-    load();
+    });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kit.handles.join('|')]);
+
 
   const kept = products.filter((p) => !dropped.includes(p.handle));
   const total = kept.reduce((s, p) => s + (p.price || 0), 0);

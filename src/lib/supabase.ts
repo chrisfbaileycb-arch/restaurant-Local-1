@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Initialize database client — must point at the LIVE project ref.
+// (The previous ref was decommissioned and returned `project_deleted` on every request.)
+const supabaseUrl = 'https://ckglrlfftiijdoumozzo.databasepad.com';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjAzMjcwOTZlLTVjNDgtNDFmMS05NzcyLWJlMTdlOWVkNmZjZiJ9.eyJwcm9qZWN0SWQiOiJja2dscmxmZnRpaWpkb3Vtb3p6byIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg3NDcxNjkyLCJleHAiOjIxMDI4MzE2OTIsImlzcyI6ImZhbW91cy5kYXRhYmFzZXBhZCIsImF1ZCI6ImZhbW91cy5jbGllbnRzIn0.VG2UB2b7JYYph3DyN6D7qPg4-OwEUz4AG4abvb4vBFA';
 
-// Initialize database client
-const supabaseUrl = 'https://wnsqwqbihpkghzcqzntg.databasepad.com';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImEzNzIwM2FjLTY0ODAtNDU0MC1hOGE3LTMxNjcwYjk4MWI5YyJ9.eyJwcm9qZWN0SWQiOiJ3bnNxd3FiaWhwa2doemNxem50ZyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg2MTkzMTU2LCJleHAiOjIxMDE1NTMxNTYsImlzcyI6ImZhbW91cy5kYXRhYmFzZXBhZCIsImF1ZCI6ImZhbW91cy5jbGllbnRzIn0.h2Leb4HNsk3m0b5tznmr4hi7cAio3bA-QFjVs8Y7pHI';
 const supabase = createClient(supabaseUrl, supabaseKey);
-
 
 export { supabase };

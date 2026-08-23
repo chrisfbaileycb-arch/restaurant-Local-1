@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Truck, Wallet } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { fetchActiveProducts, fetchCollections } from '@/lib/catalog';
 import PageShell from '@/components/site/PageShell';
 import ProductCard from '@/components/ProductCard';
 
@@ -14,22 +14,18 @@ const Shop: React.FC = () => {
   const [sort, setSort] = useState('featured');
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from('ecom_products')
-        .select('*, variants:ecom_product_variants(*)')
-        .eq('status', 'active');
-      setProducts(data || []);
-      const { data: cols } = await supabase
-        .from('ecom_collections')
-        .select('id, title, handle')
-        .eq('is_visible', true)
-        .order('title');
-      setCollections(cols || []);
+    let alive = true;
+    Promise.all([fetchActiveProducts(), fetchCollections()]).then(([prods, cols]) => {
+      if (!alive) return;
+      setProducts(prods);
+      setCollections(cols);
       setLoading(false);
+    });
+    return () => {
+      alive = false;
     };
-    load();
   }, []);
+
 
   const types = useMemo(
     () => ['All', ...Array.from(new Set(products.map((p) => p.product_type).filter(Boolean)))],

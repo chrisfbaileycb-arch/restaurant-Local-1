@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plug, ArrowRight, ShieldCheck } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { fetchProductsByHandles } from '@/lib/catalog';
 import PageShell from '@/components/site/PageShell';
 import DeviceBar from '@/components/site/DeviceBar';
 import DeviceHub from '@/components/site/DeviceHub';
@@ -12,25 +12,25 @@ import { DEVICE_KINDS, DEVICE_PROMISE } from '@/data/platform';
 /**
  * /devices — the hardware station manager.
  * ESC/POS console, live station board and the real gear behind every driver,
- * priced from ecom_products (no hardcoded hardware lists).
+ * priced from the catalog layer (never a hardcoded hardware list, and never a
+ * blank grid if the catalog is briefly unreachable).
  */
 const Devices: React.FC = () => {
   const [gear, setGear] = useState<any[]>([]);
 
   useEffect(() => {
+    let alive = true;
     const handles = Array.from(new Set(DEVICE_KINDS.flatMap((k) => k.handles)));
     if (handles.length === 0) return;
-    supabase
-      .from('ecom_products')
-      .select('*, variants:ecom_product_variants(*)')
-      .eq('status', 'active')
-      .in('handle', handles)
-      .order('price')
-      .then(({ data, error }) => {
-        if (error) console.error('Device gear query failed:', error.message);
-        setGear(data || []);
-      });
+    fetchProductsByHandles(handles).then((rows) => {
+      if (!alive) return;
+      setGear([...rows].sort((a, b) => (a.price || 0) - (b.price || 0)));
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
 
   return (
     <PageShell copilot="equipment">

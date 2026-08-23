@@ -2,21 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Phone, Mail } from 'lucide-react';
 
-import { supabase } from '@/lib/supabase';
+import { fetchCollections, FALLBACK_COLLECTIONS, type CatalogCollection } from '@/lib/catalog';
 import { BRAND, BUSINESS_TYPES, REPORTS } from '@/data/platform';
 import SignupForm from '@/components/site/SignupForm';
 
 const Footer: React.FC = () => {
-  const [collections, setCollections] = useState<any[]>([]);
+  const [collections, setCollections] = useState<CatalogCollection[]>(FALLBACK_COLLECTIONS);
 
   useEffect(() => {
-    supabase
-      .from('ecom_collections')
-      .select('id, title, handle')
-      .eq('is_visible', true)
-      .order('title')
-      .then(({ data }) => setCollections(data || []));
+    let alive = true;
+    fetchCollections().then((rows) => {
+      if (alive && rows.length > 0) setCollections(rows);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
 
   return (
     <footer className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 text-slate-300">

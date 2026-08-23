@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { fetchCollectionByHandle } from '@/lib/catalog';
 import PageShell from '@/components/site/PageShell';
 import ProductCard from '@/components/ProductCard';
 
@@ -12,47 +12,23 @@ const CollectionPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      if (!handle) return;
-      setLoading(true);
-      setProducts([]);
+    let alive = true;
+    if (!handle) return;
+    setLoading(true);
+    setProducts([]);
 
-      const { data: col } = await supabase
-        .from('ecom_collections')
-        .select('*')
-        .eq('handle', handle)
-        .single();
-
-      if (!col) {
-        setCollection(null);
-        setLoading(false);
-        return;
-      }
+    fetchCollectionByHandle(handle).then(({ collection: col, products: prods }) => {
+      if (!alive) return;
       setCollection(col);
-
-      const { data: links } = await supabase
-        .from('ecom_product_collections')
-        .select('product_id, position')
-        .eq('collection_id', col.id)
-        .order('position');
-
-      if (!links || links.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const ids = links.map((l: any) => l.product_id);
-      const { data: prods } = await supabase
-        .from('ecom_products')
-        .select('*, variants:ecom_product_variants(*)')
-        .in('id', ids)
-        .eq('status', 'active');
-
-      setProducts(ids.map((id: string) => prods?.find((p: any) => p.id === id)).filter(Boolean));
+      setProducts(prods);
       setLoading(false);
+    });
+
+    return () => {
+      alive = false;
     };
-    load();
   }, [handle]);
+
 
   return (
     <PageShell>

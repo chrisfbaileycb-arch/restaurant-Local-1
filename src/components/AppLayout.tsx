@@ -6,7 +6,8 @@ import {
   ClipboardCheck, Presentation,
 } from 'lucide-react';
 
-import { supabase } from '@/lib/supabase';
+import { fetchActiveProducts } from '@/lib/catalog';
+
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import SignupForm from '@/components/site/SignupForm';
@@ -106,18 +107,18 @@ const AppLayout: React.FC = () => {
 
 
   useEffect(() => {
-    supabase
-      .from('ecom_products')
-      .select('*, variants:ecom_product_variants(*)')
-      .eq('status', 'active')
-      .contains('tags', ['featured'])
-      .limit(8)
-      .then(({ data, error }) => {
-        if (error) console.error('Featured hardware failed to load:', error.message);
-        setFeatured(data || []);
-        setFeaturedLoaded(true);
-      });
+    let alive = true;
+    fetchActiveProducts().then((rows) => {
+      if (!alive) return;
+      const feat = rows.filter((p) => (p.tags || []).includes('featured')).slice(0, 8);
+      setFeatured(feat.length > 0 ? feat : rows.slice(0, 8));
+      setFeaturedLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
 
 
   useEffect(() => {
