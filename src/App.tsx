@@ -24,6 +24,7 @@ import Devices from "./pages/Devices";
 import StayOpenOffline from "./pages/StayOpenOffline";
 import TestRun from "./pages/TestRun";
 import TemplatesAndLogo from "./pages/TemplatesAndLogo";
+import InvestorDemo from "./pages/InvestorDemo";
 
 
 
@@ -50,6 +51,10 @@ const App = () => (
                 <Route path="/website-templates" element={<TemplatesAndLogo />} />
                 <Route path="/test-run" element={<TestRun />} />
                 <Route path="/weekend-test" element={<TestRun />} />
+                <Route path="/demo" element={<InvestorDemo />} />
+                <Route path="/investor" element={<InvestorDemo />} />
+                <Route path="/investor-demo" element={<InvestorDemo />} />
+                <Route path="/walkthrough" element={<InvestorDemo />} />
 
 
                 <Route path="/collections/:handle" element={<CollectionPage />} />

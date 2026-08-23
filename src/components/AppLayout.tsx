@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Monitor, ShoppingBag, Globe, Gift, CalendarDays, BarChart3, CreditCard, Package,
   ArrowRight, Check, Wifi, WifiOff, Upload, Sparkles, Star, ShieldCheck, Wallet, Heart, Bot,
-  ClipboardCheck,
+  ClipboardCheck, Presentation,
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
@@ -225,6 +225,12 @@ const AppLayout: React.FC = () => {
               >
                 <Bot className="h-4 w-4" /> Try the POS demo <ArrowRight className="h-4 w-4 animate-bob-x" />
               </button>
+              <Link
+                to="/demo"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900/80 px-6 py-3.5 font-extrabold text-white ring-1 ring-white/30 backdrop-blur transition hover:bg-slate-900"
+              >
+                <Presentation className="h-4 w-4" /> Full platform walkthrough
+              </Link>
               <Pointer label="60 seconds, promise" dir="left" tone="amber" className="hidden sm:inline-flex" />
             </div>
 

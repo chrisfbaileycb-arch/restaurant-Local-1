@@ -323,7 +323,7 @@ const Checkout: React.FC = () => {
               <Truck className="h-4 w-4 text-emerald-600" /> Free shipping on all orders
             </p>
             <p className="mt-1 flex items-center gap-2 text-xs text-stone-500">
-              <Lock className="h-4 w-4" /> Secured by Stripe · PCI compliant
+              <Lock className="h-4 w-4" /> Encrypted checkout · PCI compliant · P2PE validated
             </p>
           </aside>
         </div>
