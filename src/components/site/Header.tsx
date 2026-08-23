@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const PLATFORM_LINKS = [
   { to: '/demo', label: 'Full walkthrough' },
+  { to: '/locations', label: 'Multi-location' },
+  { to: '/audit', label: 'Platform audit' },
   { to: '/onboarding', label: 'Build my store' },
   { to: '/templates-logo', label: 'Templates & logo' },
   { to: '/pos', label: 'POS demo' },
@@ -17,6 +19,7 @@ const PLATFORM_LINKS = [
   { to: '/shop', label: 'Hardware shop' },
   { to: '/test-run', label: 'Weekend test run' },
 ];
+
 
 
 

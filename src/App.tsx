@@ -25,6 +25,9 @@ import StayOpenOffline from "./pages/StayOpenOffline";
 import TestRun from "./pages/TestRun";
 import TemplatesAndLogo from "./pages/TemplatesAndLogo";
 import InvestorDemo from "./pages/InvestorDemo";
+import Locations from "./pages/Locations";
+import Audit from "./pages/Audit";
+
 
 
 
@@ -55,6 +58,11 @@ const App = () => (
                 <Route path="/investor" element={<InvestorDemo />} />
                 <Route path="/investor-demo" element={<InvestorDemo />} />
                 <Route path="/walkthrough" element={<InvestorDemo />} />
+                <Route path="/locations" element={<Locations />} />
+                <Route path="/multi-location" element={<Locations />} />
+                <Route path="/group" element={<Locations />} />
+                <Route path="/audit" element={<Audit />} />
+                <Route path="/platform-audit" element={<Audit />} />
 
 
                 <Route path="/collections/:handle" element={<CollectionPage />} />

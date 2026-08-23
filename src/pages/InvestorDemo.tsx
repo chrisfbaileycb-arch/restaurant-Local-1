@@ -34,11 +34,14 @@ const SURFACE_MAP = [
   { to: '/devices', label: 'Device hub', note: '12 device classes, live drivers' },
   { to: '/stay-open-offline', label: 'Failover ladder', note: 'WiFi → LTE → phone → offline' },
   { to: '/dashboard', label: 'Owner dashboard', note: 'Reports, tax, labor, rewards' },
+  { to: '/locations', label: 'Multi-location group', note: '12 stores, roll-ups, reporting tree' },
+  { to: '/audit', label: 'Full platform audit', note: '18 domains scored against the build' },
   { to: '/shop', label: 'Hardware shop', note: 'Optional gear at margin' },
   { to: '/starter', label: 'Starter kits', note: 'Phone-only through counter + kitchen' },
   { to: '/test-run', label: 'Weekend test run', note: 'Pre-flight before a real service' },
   { to: '/templates', label: 'Sample storefronts', note: 'What the guest sees' },
 ];
+
 
 const fmtClock = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;

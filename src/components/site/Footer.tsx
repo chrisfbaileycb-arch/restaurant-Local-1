@@ -61,7 +61,10 @@ const Footer: React.FC = () => {
             <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">Platform</h4>
             <ul className="space-y-2 text-sm">
               <li><Link className="hover:text-amber-400" to="/demo">Full platform walkthrough</Link></li>
+              <li><Link className="hover:text-amber-400" to="/locations">Multi-location &amp; roll-ups</Link></li>
+              <li><Link className="hover:text-amber-400" to="/audit">Full platform audit</Link></li>
               <li><Link className="hover:text-amber-400" to="/onboarding">Menu-to-store builder</Link></li>
+
               <li><Link className="hover:text-amber-400" to="/templates-logo">Templates &amp; logo studio</Link></li>
               <li><Link className="hover:text-amber-400" to="/templates">Sample websites</Link></li>
 
