@@ -92,7 +92,10 @@ const Footer: React.FC = () => {
                 </li>
               ))}
               <li><Link className="hover:text-amber-400" to="/cart">Cart</Link></li>
+              <li><Link className="hover:text-amber-400" to="/orders">My orders</Link></li>
+              <li><Link className="hover:text-amber-400" to="/status">System status</Link></li>
             </ul>
+
           </div>
 
           <div>

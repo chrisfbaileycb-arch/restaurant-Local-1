@@ -75,10 +75,14 @@ const OrderConfirmation: React.FC = () => {
             <Link to="/onboarding" className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-5 py-3 font-semibold text-white">
               Upload my menu <ArrowRight className="h-4 w-4" />
             </Link>
+            <Link to="/orders" className="rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">
+              View my orders
+            </Link>
             <Link to="/shop" className="rounded-xl border border-stone-300 px-5 py-3 font-semibold text-stone-700 hover:bg-stone-100">
               Keep shopping
             </Link>
           </div>
+
         </div>
       </div>
     </PageShell>

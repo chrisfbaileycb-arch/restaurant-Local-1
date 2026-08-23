@@ -27,6 +27,10 @@ import TemplatesAndLogo from "./pages/TemplatesAndLogo";
 import InvestorDemo from "./pages/InvestorDemo";
 import Locations from "./pages/Locations";
 import Audit from "./pages/Audit";
+import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
+import Status from "./pages/Status";
+
 
 
 
@@ -70,6 +74,10 @@ const App = () => (
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-confirmation" element={<OrderConfirmation />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/orders/:id" element={<OrderDetail />} />
+                <Route path="/status" element={<Status />} />
+
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/pos" element={<POS />} />
                 <Route path="/dashboard" element={<Dashboard />} />

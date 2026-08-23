@@ -1,14 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Truck, Wallet } from 'lucide-react';
-import { fetchActiveProducts, fetchCollections } from '@/lib/catalog';
+import { catalogSource, fetchActiveProducts, fetchCollections, type CatalogSource } from '@/lib/catalog';
 import PageShell from '@/components/site/PageShell';
 import ProductCard from '@/components/ProductCard';
+import CatalogStatusChip from '@/components/site/CatalogStatusChip';
 
 const Shop: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [source, setSource] = useState<CatalogSource>('live');
+  const [retrying, setRetrying] = useState(false);
   const [query, setQuery] = useState('');
   const [type, setType] = useState('All');
   const [sort, setSort] = useState('featured');
@@ -19,6 +22,7 @@ const Shop: React.FC = () => {
       if (!alive) return;
       setProducts(prods);
       setCollections(cols);
+      setSource(catalogSource());
       setLoading(false);
     });
     return () => {
@@ -26,11 +30,20 @@ const Shop: React.FC = () => {
     };
   }, []);
 
+  /** Re-query the database and update the chip with whatever answered. */
+  const retryLive = useCallback(async () => {
+    setRetrying(true);
+    const prods = await fetchActiveProducts();
+    setProducts(prods);
+    setSource(catalogSource());
+    setRetrying(false);
+  }, []);
 
   const types = useMemo(
     () => ['All', ...Array.from(new Set(products.map((p) => p.product_type).filter(Boolean)))],
     [products]
   );
+
 
   const shown = useMemo(() => {
     const priceOf = (p: any) =>
@@ -59,10 +72,24 @@ const Shop: React.FC = () => {
     <PageShell>
       <div className="border-b border-stone-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">Hardware &amp; services shop</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">Hardware &amp; services shop</h1>
+            <CatalogStatusChip
+              source={source}
+              onRetry={retryLive}
+              retrying={retrying}
+            />
+          </div>
           <p className="mt-2 max-w-2xl text-stone-600">
             Everything ships pre-configured with your menu already loaded. Free shipping on all orders.
           </p>
+          {source === 'offline' && (
+            <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              The live catalog did not answer, so you are seeing our bundled snapshot. Every product, price and link
+              still works — but confirm pricing before you quote a customer.
+            </p>
+          )}
+
           <Link
             to="/starter"
             className="mt-5 flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition hover:border-emerald-400 sm:flex-row sm:items-center sm:justify-between"

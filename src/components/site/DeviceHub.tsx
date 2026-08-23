@@ -7,8 +7,9 @@ import {
 
 import Reveal from '@/components/site/Reveal';
 import { Pointer } from '@/components/site/Pointer';
+import CatalogStatusChip from '@/components/site/CatalogStatusChip';
 import { useDevices } from '@/hooks/useDevices';
-import { fetchProductsByHandles } from '@/lib/catalog';
+import { catalogSource, fetchProductsByHandles, type CatalogSource } from '@/lib/catalog';
 import {
   DEVICE_KINDS, DEVICE_PROMISE, HEALTH_CHECK, HEALTH_RULES, formatCents, type DeviceKindId,
 } from '@/data/platform';
@@ -23,6 +24,7 @@ const DeviceHub: React.FC = () => {
   const { paired, statusOf, pair, run, testAll, log, clearLog } = useDevices();
   const [active, setActive] = useState<DeviceKindId>('receipt-printer');
   const [gear, setGear] = useState<Record<string, { name: string; price: number; handle: string; image?: string }>>({});
+  const [source, setSource] = useState<CatalogSource>('live');
 
   const device = DEVICE_KINDS.find((d) => d.id === active) || DEVICE_KINDS[0];
   const Icon = ICONS[device.icon] || Printer;
@@ -38,6 +40,7 @@ const DeviceHub: React.FC = () => {
         map[p.handle] = { name: p.name, price: p.price, handle: p.handle, image: p.images?.[0] };
       });
       setGear(map);
+      setSource(catalogSource());
     });
     return () => {
       alive = false;
@@ -48,6 +51,7 @@ const DeviceHub: React.FC = () => {
   const matched = device.handles.map((h) => gear[h]).filter(Boolean);
 
 
+
   return (
     <section id="devices" className="relative overflow-hidden bg-slate-950 py-16">
       <div className="pointer-events-none absolute -left-24 top-10 h-80 w-80 animate-blob rounded-full bg-sky-500/20 blur-3xl" />
@@ -55,9 +59,13 @@ const DeviceHub: React.FC = () => {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="max-w-3xl">
-          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
-            <Plug className="h-3.5 w-3.5" /> Device hub · everything actually fires
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
+              <Plug className="h-3.5 w-3.5" /> Device hub · everything actually fires
+            </span>
+            <CatalogStatusChip source={source} tone="dark" />
+          </div>
+
           <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             Every piece of gear we sell is <span className="bg-gradient-to-r from-amber-300 to-orange-400 bg-clip-text text-transparent">wired to the software</span>
           </h2>

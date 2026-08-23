@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, ChevronDown, LogOut, Heart } from 'lucide-react';
+import { ShoppingCart, Menu, X, ChevronDown, LogOut, Heart, Package } from 'lucide-react';
 
 import { fetchCollections, FALLBACK_COLLECTIONS, type CatalogCollection } from '@/lib/catalog';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+
 
 
 
@@ -113,15 +114,23 @@ const Header: React.FC = () => {
             )}
           </Link>
           {user ? (
-            <button
-              onClick={async () => {
-                await signOut();
-                navigate('/');
-              }}
-              className="hidden items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex"
-            >
-              <LogOut className="h-4 w-4" /> Sign out
-            </button>
+            <>
+              <Link
+                to="/orders"
+                className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-orange-50 hover:text-orange-600 sm:flex"
+              >
+                <Package className="h-4 w-4" /> My orders
+              </Link>
+              <button
+                onClick={async () => {
+                  await signOut();
+                  navigate('/');
+                }}
+                className="hidden items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex"
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </button>
+            </>
           ) : (
             <Link
               to="/login"
@@ -130,6 +139,7 @@ const Header: React.FC = () => {
               Sign in
             </Link>
           )}
+
           <Link
             to="/onboarding"
             className="hidden rounded-lg bg-gradient-to-r from-fuchsia-600 to-orange-500 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-orange-500/25 transition hover:scale-[1.04] md:block"
@@ -174,6 +184,22 @@ const Header: React.FC = () => {
               </Link>
             ))}
           </div>
+          {user && (
+            <Link
+              to="/orders"
+              onClick={() => setMobile(false)}
+              className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-amber-50"
+            >
+              <Package className="h-4 w-4" /> My orders
+            </Link>
+          )}
+          <Link
+            to="/status"
+            onClick={() => setMobile(false)}
+            className="mt-2 block rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-amber-50"
+          >
+            System status
+          </Link>
           <Link
             to={user ? '/dashboard' : '/login'}
             onClick={() => setMobile(false)}
@@ -183,6 +209,7 @@ const Header: React.FC = () => {
           </Link>
         </div>
       )}
+
 
     </header>
   );
