@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 
 interface AuthContextValue {
   user: any | null;
@@ -16,26 +16,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth
+    googleCloud.auth
       .getSession()
       .then(({ data }) => {
         setUser(data?.session?.user ?? null);
       })
       .finally(() => setLoading(false));
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = googleCloud.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
     });
     return () => sub?.subscription?.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await googleCloud.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   };
 
   const signUp = async (email: string, password: string, name?: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { error } = await googleCloud.auth.signUp({
       email,
       password,
       options: { data: { name } },
@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await googleCloud.auth.signOut();
     setUser(null);
   };
 

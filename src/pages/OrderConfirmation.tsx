@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Package, ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import PageShell from '@/components/site/PageShell';
 import { formatCents } from '@/data/platform';
 
@@ -13,8 +13,8 @@ const OrderConfirmation: React.FC = () => {
 
   useEffect(() => {
     if (!orderId) return;
-    supabase.from('ecom_orders').select('*').eq('id', orderId).single().then(({ data }) => setOrder(data));
-    supabase.from('ecom_order_items').select('*').eq('order_id', orderId).then(({ data }) => setItems(data || []));
+    googleCloud.from('ecom_orders').select('*').eq('id', orderId).single().then(({ data }) => setOrder(data));
+    googleCloud.from('ecom_order_items').select('*').eq('order_id', orderId).then(({ data }) => setItems(data || []));
   }, [orderId]);
 
   return (

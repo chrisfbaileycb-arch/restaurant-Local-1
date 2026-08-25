@@ -1,13 +1,10 @@
 /**
  * Order history data layer — SINGLE SOURCE OF TRUTH for reading a signed-in
  * customer's ecom_orders / ecom_order_items.
- *
- * Same rules as the catalog layer: never throw, never console.error. A failed
- * read returns an explicit { error } so the page can show a real message
- * instead of an empty list that looks like "you have never ordered".
+ * Powered by Google Cloud Platform.
  */
 
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 
 export interface OrderRow {
   id: string;
@@ -106,7 +103,7 @@ export async function fetchOrdersForEmail(email: string): Promise<OrdersResult> 
   if (!email) return { orders: [], customer: null, error: null };
 
   try {
-    const { data: customers, error: cErr } = await supabase
+    const { data: customers, error: cErr } = await googleCloud
       .from('ecom_customers')
       .select('id, email, name')
       .ilike('email', email)
@@ -117,7 +114,7 @@ export async function fetchOrdersForEmail(email: string): Promise<OrdersResult> 
     const customer = customers?.[0] || null;
     if (!customer) return { orders: [], customer: null, error: null };
 
-    const { data: orders, error: oErr } = await supabase
+    const { data: orders, error: oErr } = await googleCloud
       .from('ecom_orders')
       .select('*')
       .eq('customer_id', customer.id)
@@ -129,7 +126,7 @@ export async function fetchOrdersForEmail(email: string): Promise<OrdersResult> 
     if (rows.length === 0) return { orders: [], customer, error: null };
 
     // One extra read gives us the item count per order for the list view.
-    const { data: items } = await supabase
+    const { data: items } = await googleCloud
       .from('ecom_order_items')
       .select('order_id, quantity')
       .in('order_id', rows.map((o) => o.id));
@@ -158,7 +155,7 @@ export interface OrderDetailResult {
 /** A single order plus its line items. Ownership is verified by the caller. */
 export async function fetchOrderDetail(id: string): Promise<OrderDetailResult> {
   try {
-    const { data: order, error: oErr } = await supabase
+    const { data: order, error: oErr } = await googleCloud
       .from('ecom_orders')
       .select('*')
       .eq('id', id)
@@ -167,7 +164,7 @@ export async function fetchOrderDetail(id: string): Promise<OrderDetailResult> {
     if (oErr) return { order: null, items: [], error: oErr.message };
     if (!order) return { order: null, items: [], error: null };
 
-    const { data: items, error: iErr } = await supabase
+    const { data: items, error: iErr } = await googleCloud
       .from('ecom_order_items')
       .select('*')
       .eq('order_id', id);

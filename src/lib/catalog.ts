@@ -2,20 +2,15 @@
  * Catalog data layer — SINGLE SOURCE OF TRUTH for reading hardware products
  * and collections.
  *
- * Why this exists: the storefront used to call supabase directly from a dozen
- * components. When the database was unreachable (a decommissioned project ref
- * returned `project_deleted` on every request) each of those components logged
- * a red console error and rendered an empty grid — the device hub, the featured
- * hardware rail, the header nav and the shop all went blank at once.
- *
- * Every read now goes through here. Each helper:
- *   1. tries the live database,
+ * Every read goes through here and uses Google Cloud Data Store with resilient
+ * local fallback caching. Each helper:
+ *   1. tries the live Google Cloud Data Store,
  *   2. on error OR empty result falls back to the bundled catalog snapshot,
  *   3. never throws and never console.errors (one single console.warn per page
  *      load, so a demo is never interrupted by a wall of red).
  */
 
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 
 export interface CatalogProduct {
   id: string;
@@ -147,7 +142,7 @@ const note = (what: string, detail?: string) => {
   );
 };
 
-/** Runs a supabase query builder, swallowing any error/rejection. */
+/** Runs a Google Cloud Data Store query builder, swallowing any error/rejection. */
 async function attempt<T>(label: string, run: () => any): Promise<T[] | null> {
   try {
     const res = await run();
@@ -187,7 +182,7 @@ const normalize = (p: any): CatalogProduct => ({
 
 export async function fetchCollections(): Promise<CatalogCollection[]> {
   const rows = await attempt<any>('collections', () =>
-    supabase.from('ecom_collections').select('id, title, handle, description, is_visible').eq('is_visible', true).order('title'),
+    googleCloud.from('ecom_collections').select('id, title, handle, description, is_visible').eq('is_visible', true).order('title'),
   );
   if (!rows) return FALLBACK_COLLECTIONS;
   lastSource = 'live';
@@ -202,7 +197,7 @@ export async function fetchCollections(): Promise<CatalogCollection[]> {
 
 export async function fetchActiveProducts(): Promise<CatalogProduct[]> {
   const rows = await attempt<any>('products', () =>
-    supabase.from('ecom_products').select('*, variants:ecom_product_variants(*)').eq('status', 'active'),
+    googleCloud.from('ecom_products').select('*, variants:ecom_product_variants(*)').eq('status', 'active'),
   );
   if (!rows) return FALLBACK_PRODUCTS;
   lastSource = 'live';
@@ -212,7 +207,7 @@ export async function fetchActiveProducts(): Promise<CatalogProduct[]> {
 export async function fetchProductsByHandles(handles: string[]): Promise<CatalogProduct[]> {
   if (handles.length === 0) return [];
   const rows = await attempt<any>('products-by-handle', () =>
-    supabase.from('ecom_products').select('*, variants:ecom_product_variants(*)').in('handle', handles),
+    googleCloud.from('ecom_products').select('*, variants:ecom_product_variants(*)').in('handle', handles),
   );
   if (!rows) return FALLBACK_PRODUCTS.filter((p) => handles.includes(p.handle));
   lastSource = 'live';
@@ -221,7 +216,7 @@ export async function fetchProductsByHandles(handles: string[]): Promise<Catalog
 
 export async function fetchProductByHandle(handle: string): Promise<CatalogProduct | null> {
   const rows = await attempt<any>('product', () =>
-    supabase.from('ecom_products').select('*, variants:ecom_product_variants(*)').eq('handle', handle).limit(1),
+    googleCloud.from('ecom_products').select('*, variants:ecom_product_variants(*)').eq('handle', handle).limit(1),
   );
   if (rows && rows[0]) {
     lastSource = 'live';
@@ -229,7 +224,7 @@ export async function fetchProductByHandle(handle: string): Promise<CatalogProdu
     // Fallback: if the embedded join came back empty for a variant product, fetch them directly.
     if (product.has_variants && (!product.variants || product.variants.length === 0)) {
       const vrows = await attempt<any>('variants', () =>
-        supabase.from('ecom_product_variants').select('*').eq('product_id', product.id).order('position'),
+        googleCloud.from('ecom_product_variants').select('*').eq('product_id', product.id).order('position'),
       );
       product.variants = vrows || [];
     }
@@ -242,18 +237,18 @@ export async function fetchCollectionByHandle(
   handle: string,
 ): Promise<{ collection: CatalogCollection | null; products: CatalogProduct[] }> {
   const colRows = await attempt<any>('collection', () =>
-    supabase.from('ecom_collections').select('*').eq('handle', handle).limit(1),
+    googleCloud.from('ecom_collections').select('*').eq('handle', handle).limit(1),
   );
 
   if (colRows && colRows[0]) {
     const col = colRows[0];
     const linkRows = await attempt<any>('collection-links', () =>
-      supabase.from('ecom_product_collections').select('product_id, position').eq('collection_id', col.id).order('position'),
+      googleCloud.from('ecom_product_collections').select('product_id, position').eq('collection_id', col.id).order('position'),
     );
     if (linkRows) {
       const ids = linkRows.map((l: any) => l.product_id);
       const prodRows = await attempt<any>('collection-products', () =>
-        supabase.from('ecom_products').select('*, variants:ecom_product_variants(*)').in('id', ids).eq('status', 'active'),
+        googleCloud.from('ecom_products').select('*, variants:ecom_product_variants(*)').in('id', ids).eq('status', 'active'),
       );
       if (prodRows) {
         const byId = new Map(prodRows.map((p: any) => [p.id, normalize(p)]));

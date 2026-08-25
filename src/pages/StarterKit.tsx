@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Smartphone, Tablet, Printer, Wallet, ShieldCheck, Truck, ArrowRight, Bot } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import PageShell from '@/components/site/PageShell';
 import BudgetBuilder from '@/components/site/BudgetBuilder';
 import ProductCard from '@/components/ProductCard';
@@ -65,7 +65,7 @@ const StarterKit: React.FC = () => {
   const [cheapest, setCheapest] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase
+    googleCloud
       .from('ecom_products')
       .select('*, variants:ecom_product_variants(*)')
       .eq('status', 'active')

@@ -1,10 +1,11 @@
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 
 // ------------------------------------------------------------
 // brand.writeCopy — front-end side of the copy skill.
 // Sends parsed menu items + the saved vibe words to the writer,
 // then saves whatever the owner accepts back to menu_items and
 // the shop_vibe_briefs tagline.
+// Powered by Google Cloud ADK & Gemini 3.7 Flash.
 // ------------------------------------------------------------
 
 export interface CopyRequestItem {
@@ -41,7 +42,7 @@ export const writeMenuCopy = async (args: {
   templateName?: string;
   items: CopyRequestItem[];
 }): Promise<CopyResult> => {
-  const { data, error } = await supabase.functions.invoke('write-copy', { body: args });
+  const { data, error } = await googleCloud.functions.invoke('write-copy', { body: args });
   if (error) return { success: false, tagline: '', items: [], written: 0, error: error.message };
   return (data || { success: false, tagline: '', items: [], written: 0, error: 'No response from the writer' }) as CopyResult;
 };
@@ -62,14 +63,14 @@ export const saveMenuCopy = async (args: {
 
   for (const line of accepted) {
     const patch = { description: line.description.trim() };
-    const query = supabase.from('menu_items').update(patch).eq('shop_id', shopId);
+    const query = googleCloud.from('menu_items').update(patch).eq('shop_id', shopId);
     const { error } = line.id ? await query.eq('id', line.id) : await query.eq('name', line.name);
     if (!error) saved += 1;
   }
 
   let taglineSaved = false;
   if (tagline && tagline.trim()) {
-    const { error } = await supabase
+    const { error } = await googleCloud
       .from('shop_vibe_briefs')
       .upsert({ shop_id: shopId, tagline: tagline.trim(), updated_at: new Date().toISOString() }, { onConflict: 'shop_id' });
     taglineSaved = !error;

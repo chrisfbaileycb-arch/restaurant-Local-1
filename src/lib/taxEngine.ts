@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import { DEFAULT_TAX_RATE } from '@/data/platform';
 import {
   DEFAULT_TAX_CLASS,
@@ -8,7 +8,7 @@ import {
 import type { JurisdictionLevel, TaxClassId } from '@/data/taxClasses';
 
 // ============================================================
-// Sales tax engine.
+// Sales tax engine powered by Google Cloud SDK.
 // A shop can stack any number of jurisdictions (state, county, city,
 // special district) and each one decides per tax class whether it is
 // taxable and at what rate. That covers no-sales-tax states, grocery
@@ -203,7 +203,7 @@ export const loadTaxProfile = async (
 ): Promise<TaxProfile> => {
   if (!shopId) return { ...EMPTY_TAX_PROFILE, fallbackRate };
 
-  const { data: rows } = await supabase
+  const { data: rows } = await googleCloud
     .from('tax_jurisdictions')
     .select('*')
     .eq('shop_id', shopId)
@@ -211,7 +211,7 @@ export const loadTaxProfile = async (
 
   if (!rows || rows.length === 0) return { shopId, jurisdictions: [], fallbackRate };
 
-  const { data: rules } = await supabase
+  const { data: rules } = await googleCloud
     .from('tax_class_rules')
     .select('*')
     .in('jurisdiction_id', rows.map((r: any) => r.id));
@@ -243,17 +243,17 @@ export const saveJurisdiction = async (shopId: string, input: JurisdictionInput)
     is_active: input.isActive !== false,
   };
   if (input.id) {
-    const { error } = await supabase.from('tax_jurisdictions').update(payload).eq('id', input.id);
+    const { error } = await googleCloud.from('tax_jurisdictions').update(payload).eq('id', input.id);
     if (error) throw new Error(error.message);
     return input.id;
   }
-  const { data, error } = await supabase.from('tax_jurisdictions').insert(payload).select('id').single();
+  const { data, error } = await googleCloud.from('tax_jurisdictions').insert(payload).select('id').single();
   if (error || !data) throw new Error(error?.message || 'Could not add that jurisdiction');
   return data.id as string;
 };
 
 export const deleteJurisdiction = async (id: string): Promise<void> => {
-  const { error } = await supabase.from('tax_jurisdictions').delete().eq('id', id);
+  const { error } = await googleCloud.from('tax_jurisdictions').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
 
@@ -264,7 +264,7 @@ export const saveClassRule = async (
   isTaxable: boolean,
   rateOverride: number | null = null,
 ): Promise<void> => {
-  const { error } = await supabase
+  const { error } = await googleCloud
     .from('tax_class_rules')
     .upsert(
       {
@@ -280,7 +280,7 @@ export const saveClassRule = async (
 
 /** Save the tax class on a single menu item. */
 export const saveItemTaxClass = async (itemId: string, cls: TaxClassId): Promise<void> => {
-  const { error } = await supabase.from('menu_items').update({ tax_class: cls }).eq('id', itemId);
+  const { error } = await googleCloud.from('menu_items').update({ tax_class: cls }).eq('id', itemId);
   if (error) throw new Error(error.message);
 };
 

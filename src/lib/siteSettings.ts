@@ -1,12 +1,11 @@
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import { SITE_BLOCKS } from '@/data/platform';
 
 // ------------------------------------------------------------
 // The owner's real, saved website setup: domain, Google listing,
 // hours, address, phone, announcement banner, logo, photo grid,
 // socials, inquiry form and which sections are on.
-// One source of truth for the Dashboard → Website tab AND for the
-// copilot's web & brand skill engine.
+// Powered by Google Cloud Platform & Google Maps Places API.
 // ------------------------------------------------------------
 
 export interface SiteSocials {
@@ -114,7 +113,7 @@ const normalize = (row: any, shopId: string): SiteSettings => ({
 /** Read the saved website setup (returns defaults when nothing is saved yet). */
 export const loadSiteSettings = async (shopId?: string | null): Promise<SiteSettings | null> => {
   if (!shopId) return null;
-  const { data } = await supabase.from('shop_site_settings').select('*').eq('shop_id', shopId).limit(1);
+  const { data } = await googleCloud.from('shop_site_settings').select('*').eq('shop_id', shopId).limit(1);
   return normalize(data?.[0], shopId);
 };
 
@@ -143,7 +142,7 @@ export const saveSiteSettings = async (settings: SiteSettings): Promise<SiteSett
     google_synced_at: settings.google_synced_at || null,
     updated_at: new Date().toISOString(),
   };
-  const { error } = await supabase.from('shop_site_settings').upsert(payload, { onConflict: 'shop_id' });
+  const { error } = await googleCloud.from('shop_site_settings').upsert(payload, { onConflict: 'shop_id' });
   if (error) throw new Error(error.message || 'Could not save your website settings');
   return { ...settings, ...payload } as SiteSettings;
 };
@@ -174,7 +173,7 @@ export interface GooglePlaceResult {
 
 /** Look a Google Business listing up by place id, profile link or business name. */
 export const fetchGooglePlace = async (query: string): Promise<GooglePlaceResult> => {
-  const { data, error } = await supabase.functions.invoke('google-place-sync', { body: { query } });
+  const { data, error } = await googleCloud.functions.invoke('google-place-sync', { body: { query } });
   if (error) return { success: false, error: error.message || 'Google lookup failed' };
   return (data || { success: false, error: 'No response from Google' }) as GooglePlaceResult;
 };
@@ -200,11 +199,11 @@ export const uploadShopMedia = async (
 ): Promise<string> => {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `${shopId}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
-  const { error } = await supabase.storage
+  const { error } = await googleCloud.storage
     .from(SHOP_MEDIA_BUCKET)
     .upload(path, file, { cacheControl: '3600', upsert: true, contentType: file.type || undefined });
   if (error) throw new Error(error.message || 'Upload failed');
-  const { data } = supabase.storage.from(SHOP_MEDIA_BUCKET).getPublicUrl(path);
+  const { data } = googleCloud.storage.from(SHOP_MEDIA_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 };
 

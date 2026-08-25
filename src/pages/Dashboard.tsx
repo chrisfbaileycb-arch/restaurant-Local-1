@@ -7,7 +7,7 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
 } from 'recharts';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import PageShell from '@/components/site/PageShell';
 import StationMonitor from '@/components/site/StationMonitor';
 import TaxRateSetting from '@/components/site/TaxRateSetting';
@@ -57,7 +57,7 @@ const Dashboard: React.FC = () => {
 
 
   useEffect(() => {
-    supabase
+    googleCloud
       .from('ecom_orders')
       .select('id, status, total, created_at, shipping_address')
       .order('created_at', { ascending: false })

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Minus, Plus, ShoppingCart, Wallet } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import { useCart } from '@/contexts/CartContext';
 import { formatCents, STARTER_PLANS, BUDGET_TAG, PLANS, SETUP_DEPOSIT } from '@/data/platform';
 
@@ -21,7 +21,7 @@ const BudgetBuilder: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
+      const { data } = await googleCloud
         .from('ecom_products')
         .select('*')
         .eq('status', 'active')

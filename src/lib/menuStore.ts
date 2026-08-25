@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import { DEMO_MENU, MENU_CATEGORIES } from '@/data/menu';
 import { DEFAULT_TAX_RATE } from '@/data/platform';
 import { DEFAULT_TAX_CLASS, TAX_CLASSES } from '@/data/taxClasses';
@@ -90,7 +90,7 @@ export const fileToParsePayload = (
 /** Send an upload to the AI parser and return structured menu JSON. */
 export const parseMenuFile = async (file: File): Promise<ParsedMenu & { error?: string | null }> => {
   const payload = await fileToParsePayload(file);
-  const { data, error } = await supabase.functions.invoke('parse-menu', { body: payload });
+  const { data, error } = await googleCloud.functions.invoke('parse-menu', { body: payload });
   if (error) throw new Error(error.message || 'Menu parsing failed');
   if (!data?.success) throw new Error(data?.error || 'No menu items were detected in that file.');
   return data as ParsedMenu;
@@ -98,7 +98,7 @@ export const parseMenuFile = async (file: File): Promise<ParsedMenu & { error?: 
 
 /** Parse plain text (used for the "sample menu" shortcut and pasted menus). */
 export const parseMenuText = async (text: string, fileName = 'menu.txt') => {
-  const { data, error } = await supabase.functions.invoke('parse-menu', { body: { text, fileName } });
+  const { data, error } = await googleCloud.functions.invoke('parse-menu', { body: { text, fileName } });
   if (error) throw new Error(error.message || 'Menu parsing failed');
   if (!data?.success) throw new Error(data?.error || 'No menu items were detected.');
   return data as ParsedMenu;
@@ -109,7 +109,7 @@ export const parseMenuText = async (text: string, fileName = 'menu.txt') => {
  * Returns the same ParsedMenu shape as an upload.
  */
 export const ingestMenuUrl = async (url: string, kind: 'pdf-url' | 'website' = 'website') => {
-  const { data, error } = await supabase.functions.invoke('ingest-url', { body: { url, kind } });
+  const { data, error } = await googleCloud.functions.invoke('ingest-url', { body: { url, kind } });
   if (error) throw new Error(error.message || 'Could not read that link');
   if (!data?.success) throw new Error(data?.error || 'No menu items were found at that link.');
   return data as ParsedMenu;
@@ -177,13 +177,13 @@ export const saveParsedMenu = async ({
   let shopId: string | null = null;
 
   if (ownerId) {
-    const { data } = await supabase.from('shops').select('id').eq('owner_id', ownerId).limit(1);
+    const { data } = await googleCloud.from('shops').select('id').eq('owner_id', ownerId).limit(1);
     shopId = data?.[0]?.id ?? null;
   }
   if (!shopId) {
     const stored = localStorage.getItem(ACTIVE_SHOP_KEY);
     if (stored) {
-      const { data } = await supabase.from('shops').select('id').eq('id', stored).limit(1);
+      const { data } = await googleCloud.from('shops').select('id').eq('id', stored).limit(1);
       shopId = data?.[0]?.id ?? null;
     }
   }
@@ -200,17 +200,17 @@ export const saveParsedMenu = async ({
   };
 
   if (shopId) {
-    await supabase.from('shops').update(shopPayload).eq('id', shopId);
-    await supabase.from('menu_items').delete().eq('shop_id', shopId);
-    await supabase.from('menu_categories').delete().eq('shop_id', shopId);
+    await googleCloud.from('shops').update(shopPayload).eq('id', shopId);
+    await googleCloud.from('menu_items').delete().eq('shop_id', shopId);
+    await googleCloud.from('menu_categories').delete().eq('shop_id', shopId);
   } else {
-    const { data, error } = await supabase.from('shops').insert(shopPayload).select('id').single();
+    const { data, error } = await googleCloud.from('shops').insert(shopPayload).select('id').single();
     if (error || !data) throw new Error(error?.message || 'Could not create your shop');
     shopId = data.id;
   }
 
   const catRows = menu.categories.map((c, i) => ({ shop_id: shopId, name: c.name, position: i }));
-  const { data: savedCats } = await supabase.from('menu_categories').insert(catRows).select('id, name, position');
+  const { data: savedCats } = await googleCloud.from('menu_categories').insert(catRows).select('id, name, position');
 
   const itemRows: any[] = [];
   menu.categories.forEach((c, ci) => {
@@ -228,7 +228,7 @@ export const saveParsedMenu = async ({
       });
     });
   });
-  if (itemRows.length) await supabase.from('menu_items').insert(itemRows);
+  if (itemRows.length) await googleCloud.from('menu_items').insert(itemRows);
 
   localStorage.setItem(ACTIVE_SHOP_KEY, shopId as string);
   return shopId as string;
@@ -245,7 +245,7 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
   let shop: any = null;
 
   if (ownerId) {
-    const { data } = await supabase
+    const { data } = await googleCloud
       .from('shops')
       .select('*')
       .eq('owner_id', ownerId)
@@ -256,7 +256,7 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
   if (!shop) {
     const stored = localStorage.getItem(ACTIVE_SHOP_KEY);
     if (stored) {
-      const { data } = await supabase.from('shops').select('*').eq('id', stored).limit(1);
+      const { data } = await googleCloud.from('shops').select('*').eq('id', stored).limit(1);
       shop = data?.[0] || null;
     }
   }
@@ -266,12 +266,12 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
   // Jurisdictions (state / county / city / special) come from the shop's own setup.
   const taxProfile = await loadTaxProfile(shop.id, taxRate);
 
-  const { data: cats } = await supabase
+  const { data: cats } = await googleCloud
     .from('menu_categories')
     .select('id, name, position')
     .eq('shop_id', shop.id)
     .order('position');
-  const { data: rows } = await supabase
+  const { data: rows } = await googleCloud
     .from('menu_items')
     .select('id, name, price, category_id, modifiers, description, tax_class')
     .eq('shop_id', shop.id)
@@ -312,14 +312,14 @@ export const loadShopMenu = async (ownerId?: string | null): Promise<LoadedMenu>
 
 /** Read just the tax setting for a shop (used by the settings panel). */
 export const loadShopTaxRate = async (shopId: string): Promise<number> => {
-  const { data } = await supabase.from('shops').select('tax_rate').eq('id', shopId).limit(1);
+  const { data } = await googleCloud.from('shops').select('tax_rate').eq('id', shopId).limit(1);
   return readTaxRate(data?.[0]);
 };
 
 /** Save the shop's sales tax rate (stored as a decimal, e.g. 0.0825). */
 export const saveShopTaxRate = async (shopId: string, rate: number): Promise<void> => {
   const safe = Number.isFinite(rate) && rate >= 0 ? Math.min(rate, 1) : DEFAULT_TAX_RATE;
-  const { error } = await supabase
+  const { error } = await googleCloud
     .from('shops')
     .update({ tax_rate: safe, updated_at: new Date().toISOString() })
     .eq('id', shopId);

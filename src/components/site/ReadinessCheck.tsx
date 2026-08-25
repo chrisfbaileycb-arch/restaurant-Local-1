@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 
 type Level = 'ok' | 'warn' | 'fail' | 'pending';
 
@@ -40,7 +40,7 @@ const ReadinessCheck: React.FC = () => {
     const out: Row[] = [];
 
     const count = async (table: string, apply?: (q: any) => any) => {
-      let q: any = supabase.from(table).select('id', { count: 'exact', head: true });
+      let q: any = googleCloud.from(table).select('id', { count: 'exact', head: true });
       if (apply) q = apply(q);
       const { count: c, error } = await q;
       if (error) throw new Error(error.message);
@@ -134,7 +134,7 @@ const ReadinessCheck: React.FC = () => {
 
     // 7 — tax engine edge function (real invoke)
     try {
-      const { data, error } = await supabase.functions.invoke('calculate-tax', {
+      const { data, error } = await googleCloud.functions.invoke('calculate-tax', {
         body: { state: 'TX', subtotal: 10000 },
       });
       if (error) throw new Error(error.message);

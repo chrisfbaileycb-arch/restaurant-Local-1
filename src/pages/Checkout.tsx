@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Lock, Truck, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import PageShell from '@/components/site/PageShell';
 import { useCart } from '@/contexts/CartContext';
 import {
@@ -78,7 +78,7 @@ const Checkout: React.FC = () => {
   // shipping (AI rules)
   useEffect(() => {
     if (subtotal <= 0) return;
-    supabase.functions
+    googleCloud.functions
       .invoke('calculate-shipping', {
         body: {
           cartItems: cart.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
@@ -99,13 +99,12 @@ const Checkout: React.FC = () => {
       setTax(0);
       return;
     }
-    supabase.functions
+    googleCloud.functions
       .invoke('calculate-tax', { body: { state: address.state.trim(), subtotal } })
       .then(({ data }) => {
         if (data?.success) setTax(data.taxCents || 0);
       })
       .catch(() => setTax(0));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address.state, subtotal]);
 
   // payment intent
@@ -113,7 +112,7 @@ const Checkout: React.FC = () => {
     if (total <= 0) return;
     let cancelled = false;
     setPaymentError('');
-    supabase.functions
+    googleCloud.functions
       .invoke('create-payment-intent', { body: { amount: total, currency: 'usd' } })
       .then(({ data, error }) => {
         if (cancelled) return;
@@ -126,7 +125,6 @@ const Checkout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 
   const valid =
@@ -135,13 +133,13 @@ const Checkout: React.FC = () => {
   const handlePaymentSuccess = async (paymentIntent: any) => {
     setPlacing(true);
     try {
-      const { data: customer } = await supabase
+      const { data: customer } = await googleCloud
         .from('ecom_customers')
         .upsert({ email: address.email, name: address.name, phone: address.phone || null }, { onConflict: 'email' })
         .select('id, email, name')
         .single();
 
-      const { data: order } = await supabase
+      const { data: order } = await googleCloud
         .from('ecom_orders')
         .insert({
           customer_id: customer?.id,
@@ -168,9 +166,9 @@ const Checkout: React.FC = () => {
           unit_price: i.price,
           total: i.price * i.quantity,
         }));
-        await supabase.from('ecom_order_items').insert(items);
+        await googleCloud.from('ecom_order_items').insert(items);
 
-        const { data: orderItems } = await supabase
+        const { data: orderItems } = await googleCloud
           .from('ecom_order_items')
           .select('*')
           .eq('order_id', order.id);

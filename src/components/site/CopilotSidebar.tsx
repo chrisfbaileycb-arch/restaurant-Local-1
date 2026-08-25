@@ -6,7 +6,6 @@ import {
   Printer, Download, CalendarDays, BarChart3, Megaphone,
 } from 'lucide-react';
 
-import { supabase } from '@/lib/supabase';
 import CopilotSentinel from '@/components/site/CopilotSentinel';
 import CopilotKitCard from '@/components/site/CopilotKitCard';
 import CopilotHistory from '@/components/site/CopilotHistory';

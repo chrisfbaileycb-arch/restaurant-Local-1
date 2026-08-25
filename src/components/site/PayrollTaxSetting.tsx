@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Check, AlertTriangle, Users } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import { useAuth } from '@/contexts/AuthContext';
 import { PAYROLL_TAXES, PAYROLL_META_KEY } from '@/data/taxClasses';
 import { loadShopMenu } from '@/lib/menuStore';
@@ -30,7 +30,7 @@ const PayrollTaxSetting: React.FC = () => {
         setShopId(m.shopId);
         let saved: Record<string, number> = {};
         if (m.shopId) {
-          const { data } = await supabase.from('shops').select('metadata').eq('id', m.shopId).limit(1);
+          const { data } = await googleCloud.from('shops').select('metadata').eq('id', m.shopId).limit(1);
           saved = (data?.[0]?.metadata?.[PAYROLL_META_KEY] as Record<string, number>) || {};
         }
         const next: Record<string, string> = {};
@@ -61,9 +61,9 @@ const PayrollTaxSetting: React.FC = () => {
         const v = Number(rates[t.id]);
         payload[t.id] = Number.isFinite(v) && v >= 0 ? v / 100 : t.defaultRate;
       });
-      const { data } = await supabase.from('shops').select('metadata').eq('id', shopId).limit(1);
+      const { data } = await googleCloud.from('shops').select('metadata').eq('id', shopId).limit(1);
       const metadata = { ...(data?.[0]?.metadata || {}), [PAYROLL_META_KEY]: payload };
-      const { error: err } = await supabase
+      const { error: err } = await googleCloud
         .from('shops')
         .update({ metadata, updated_at: new Date().toISOString() })
         .eq('id', shopId);

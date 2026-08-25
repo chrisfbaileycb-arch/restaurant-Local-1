@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import { templateById, type SiteTemplate } from '@/data/vibe';
 
 // ------------------------------------------------------------
@@ -6,6 +6,7 @@ import { templateById, type SiteTemplate } from '@/data/vibe';
 // that matched, and the logo we generated for them.
 // One source of truth for the onboarding vibe step, the dashboard
 // website tab and the copilot's brand skills.
+// Powered by Google Cloud SDK & Google GenAI.
 // ------------------------------------------------------------
 
 export interface VibeBrief {
@@ -35,13 +36,13 @@ export const emptyBrief = (shopId: string): VibeBrief => ({
 
 export const loadVibeBrief = async (shopId?: string | null): Promise<VibeBrief | null> => {
   if (!shopId) return null;
-  const { data } = await supabase.from('shop_vibe_briefs').select('*').eq('shop_id', shopId).limit(1);
+  const { data } = await googleCloud.from('shop_vibe_briefs').select('*').eq('shop_id', shopId).limit(1);
   return { ...emptyBrief(shopId), ...(data?.[0] || {}) } as VibeBrief;
 };
 
 export const saveVibeBrief = async (brief: VibeBrief): Promise<VibeBrief> => {
   const payload = { ...brief, updated_at: new Date().toISOString() };
-  const { error } = await supabase.from('shop_vibe_briefs').upsert(payload, { onConflict: 'shop_id' });
+  const { error } = await googleCloud.from('shop_vibe_briefs').upsert(payload, { onConflict: 'shop_id' });
   if (error) throw new Error(error.message || 'Could not save your vibe brief');
   return payload;
 };
@@ -62,9 +63,9 @@ export interface LogoResult {
   error?: string;
 }
 
-/** Ask the AI gateway for a logo mark built from the vibe brief. */
+/** Ask the Google ADK AI gateway for a logo mark built from the vibe brief. */
 export const generateLogo = async (req: LogoRequest): Promise<LogoResult> => {
-  const { data, error } = await supabase.functions.invoke('generate-logo', { body: req });
+  const { data, error } = await googleCloud.functions.invoke('generate-logo', { body: req });
   if (error) return { success: false, error: error.message || 'Logo generation failed' };
   return (data || { success: false, error: 'No response from the logo service' }) as LogoResult;
 };

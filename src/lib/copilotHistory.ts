@@ -1,9 +1,9 @@
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import type { AuditEntry } from '@/lib/opsStore';
 
 // ------------------------------------------------------------
 // Copilot conversation persistence: every message the owner sends and
-// every answer the copilot gives is written to copilot_messages, so an
+// every answer the copilot gives is written to copilot_messages via Google Cloud, so an
 // owner can look back at what changed and when.
 // ------------------------------------------------------------
 
@@ -32,7 +32,7 @@ export const saveCopilotMessage = async ({
   shopId, userId, mode, role, text, effects, payload,
 }: SaveArgs): Promise<void> => {
   try {
-    await supabase.from('copilot_messages').insert({
+    await googleCloud.from('copilot_messages').insert({
       shop_id: shopId || null,
       user_id: userId || null,
       role,
@@ -54,7 +54,7 @@ export const loadCopilotHistory = async (
 ): Promise<StoredMessage[]> => {
   if (!shopId && !userId) return [];
   try {
-    let q = supabase
+    let q = googleCloud
       .from('copilot_messages')
       .select('id, role, text, effects, payload, mode, created_at')
       .order('created_at', { ascending: false })

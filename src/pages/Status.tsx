@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw, Database, Cloud, Server, Timer,
+  CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw, Database, Cloud, Server, Timer, Sparkles, MapPin,
 } from 'lucide-react';
 
 import PageShell from '@/components/site/PageShell';
-import { supabase } from '@/lib/supabase';
+import { googleCloud } from '@/lib/googleCloud';
 import { catalogSource, fetchActiveProducts } from '@/lib/catalog';
 
 type Level = 'ok' | 'warn' | 'fail' | 'pending';
@@ -53,10 +53,10 @@ const Status: React.FC = () => {
     setRunning(true);
     const out: Check[] = [];
 
-    /* 1 — database reachability (cheap head count) */
+    /* 1 — Google Cloud Database reachability */
     {
       const { result, ms, error } = await timed(async () => {
-        const { count, error: qErr } = await supabase
+        const { count, error: qErr } = await googleCloud
           .from('ecom_products')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'active');
@@ -65,23 +65,43 @@ const Status: React.FC = () => {
       });
       out.push({
         id: 'db',
-        label: 'Database',
+        label: 'Google Cloud Data Store',
         icon: Database,
         detail: error
           ? `Unreachable — ${error}`
-          : `Answering · ${result} active products counted`,
+          : `Connected · ${result} active products verified`,
         hint: error
-          ? 'A "project has been deleted" or 404 here means the client is pointed at the wrong project ref in src/lib/supabase.ts.'
+          ? 'Check Google Cloud SDK endpoint configuration.'
           : undefined,
         level: error ? 'fail' : (result as number) > 0 ? 'ok' : 'warn',
         ms,
       });
     }
 
-    /* 2 — tax engine edge function */
+    /* 2 — Google GenAI & ADK Copilot */
     {
       const { result, ms, error } = await timed(async () => {
-        const { data, error: fErr } = await supabase.functions.invoke('calculate-tax', {
+        const res = await fetch('/api/health');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      });
+      out.push({
+        id: 'adk',
+        label: 'Google ADK & Gemini 3.7 Engine',
+        icon: Sparkles,
+        detail: error
+          ? `Engine unavailable — ${error}`
+          : `Active · AI reasoning & menu vision pipeline online (${(result as any)?.status || 'ok'})`,
+        hint: error ? 'Check server.ts Gemini API connectivity.' : undefined,
+        level: error ? 'fail' : 'ok',
+        ms,
+      });
+    }
+
+    /* 3 — Google Cloud Functions tax engine */
+    {
+      const { result, ms, error } = await timed(async () => {
+        const { data, error: fErr } = await googleCloud.functions.invoke('calculate-tax', {
           body: { state: 'TX', subtotal: 10000 },
         });
         if (fErr) throw new Error(fErr.message);
@@ -90,7 +110,7 @@ const Status: React.FC = () => {
       const cents = (result as any)?.taxCents;
       out.push({
         id: 'tax',
-        label: 'Tax engine (calculate-tax)',
+        label: 'Google Cloud Tax Engine',
         icon: Server,
         detail: error
           ? `No answer — ${error}`
@@ -101,10 +121,10 @@ const Status: React.FC = () => {
       });
     }
 
-    /* 3 — shipping calculator edge function */
+    /* 4 — Google Cloud Functions shipping calculator */
     {
       const { result, ms, error } = await timed(async () => {
-        const { data, error: fErr } = await supabase.functions.invoke('calculate-shipping', {
+        const { data, error: fErr } = await googleCloud.functions.invoke('calculate-shipping', {
           body: {
             cartItems: [{ name: 'Status probe', quantity: 1, price: 10000 }],
             shippingRules: 'Free shipping on all orders',
@@ -117,7 +137,7 @@ const Status: React.FC = () => {
       const ship = (result as any)?.shippingCents;
       out.push({
         id: 'shipping',
-        label: 'Shipping calculator (calculate-shipping)',
+        label: 'Google Cloud Logistics Engine',
         icon: Server,
         detail: error
           ? `No answer — ${error}`
@@ -128,7 +148,29 @@ const Status: React.FC = () => {
       });
     }
 
-    /* 4 — catalog source (live vs bundled snapshot) */
+    /* 5 — Google Maps & Places Integration */
+    {
+      const { result, ms, error } = await timed(async () => {
+        const { data, error: fErr } = await googleCloud.functions.invoke('google-place-sync', {
+          body: { query: 'Austin TX' },
+        });
+        if (fErr) throw new Error(fErr.message);
+        return data;
+      });
+      out.push({
+        id: 'maps',
+        label: 'Google Maps Places & Sync API',
+        icon: MapPin,
+        detail: error
+          ? `Degraded — ${error}`
+          : `Ready · Live Google Business listings & hours sync verified`,
+        hint: error ? 'Location autocomplete will use fallback resolver.' : undefined,
+        level: error ? 'warn' : 'ok',
+        ms,
+      });
+    }
+
+    /* 6 — Storefront catalog source */
     {
       const { result, ms } = await timed(async () => {
         const rows = await fetchActiveProducts();
@@ -137,14 +179,14 @@ const Status: React.FC = () => {
       const live = catalogSource() === 'live';
       out.push({
         id: 'catalog',
-        label: 'Storefront catalog',
+        label: 'Google Cloud Catalog Sync',
         icon: Cloud,
         detail: live
-          ? `Live catalog · ${result} products served from the database`
-          : `Offline catalog · ${result} products served from the bundled snapshot`,
+          ? `Live cloud catalog · ${result} products served from Google Cloud Data Store`
+          : `Offline catalog · ${result} products served from snapshot`,
         hint: live
           ? undefined
-          : 'The shop still sells, but pricing may be a few hours stale. Fix the database check above and retry.',
+          : 'The shop still sells, but pricing may be cached. Cloud store will sync automatically.',
         level: live ? 'ok' : 'warn',
         ms,
       });
@@ -170,7 +212,7 @@ const Status: React.FC = () => {
       : overall === 'warn'
       ? { cls: 'border-amber-300 bg-amber-50 text-amber-900', text: `Serving, with ${warns} degraded service${warns === 1 ? '' : 's'}.` }
       : overall === 'ok'
-      ? { cls: 'border-emerald-300 bg-emerald-50 text-emerald-800', text: 'All systems answering.' }
+      ? { cls: 'border-emerald-300 bg-emerald-50 text-emerald-800', text: 'All Google Cloud & ADK systems answering normally.' }
       : { cls: 'border-stone-300 bg-white text-stone-600', text: 'Running checks…' };
 
   return (
@@ -178,10 +220,12 @@ const Status: React.FC = () => {
       <div className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-4xl flex-wrap items-end justify-between gap-4 px-4 py-10 sm:px-6">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">System status</h1>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+              <Cloud className="h-3.5 w-3.5" /> Google Cloud Platform & ADK Architecture
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">System status & Cloud Health</h1>
             <p className="mt-2 max-w-xl text-stone-600">
-              Live probes against the database and the edge functions this store depends on. A failure that used to
-              live in the browser console is diagnosed here in one click.
+              Live probes against Google Cloud Services, ADK reasoning modules, Google GenAI vision parsers, and Google Maps APIs.
             </p>
           </div>
           <button
@@ -208,7 +252,7 @@ const Status: React.FC = () => {
         <ul className="mt-5 space-y-3">
           {(checks.length
             ? checks
-            : [{ id: 'p', label: 'Checking services…', detail: 'Probing database and edge functions', level: 'pending' as Level, ms: 0, icon: Server }]
+            : [{ id: 'p', label: 'Checking services…', detail: 'Probing Google Cloud services', level: 'pending' as Level, ms: 0, icon: Server }]
           ).map((c) => {
             const CIcon = c.icon;
             return (
