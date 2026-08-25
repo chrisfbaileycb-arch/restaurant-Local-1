@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Wifi, WifiOff, Trash2, Minus, Plus, CreditCard, DollarSign, Gift, Check, RefreshCw, Percent, Receipt, Loader2, Upload, Lock, Ban, Bot, Smartphone, Monitor,
-  ChefHat, QrCode, Package, BarChart3, Sparkles, Layers,
+  ChefHat, QrCode, Package, BarChart3, Sparkles, Layers, Database, ShieldCheck, CloudOff
 } from 'lucide-react';
 import PageShell from '@/components/site/PageShell';
 import DeviceBar from '@/components/site/DeviceBar';
@@ -13,6 +13,7 @@ import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
 import QRMenuGenerator from '@/components/qr/QRMenuGenerator';
 import InventoryAlerts from '@/components/inventory/InventoryAlerts';
 import DailySalesSummary from '@/components/sales/DailySalesSummary';
+import { OfflineQueueModal } from '@/components/pos/OfflineQueueModal';
 
 import type { MenuItem } from '@/data/menu';
 import { formatCents, formatTaxRate } from '@/data/platform';
@@ -23,8 +24,16 @@ import { useOps } from '@/lib/opsStore';
 import { loadShopMenu, DEMO_LOADED_MENU } from '@/lib/menuStore';
 import { computeTax } from '@/lib/taxEngine';
 import type { LoadedMenu } from '@/lib/menuStore';
+import {
+  QueuedPOSOrder,
+  enqueueOfflineOrder,
+  syncQueuedOrders,
+  subscribeOfflineQueue,
+} from '@/lib/offlineQueue';
 
 type PosActiveTab = 'register' | 'kds' | 'qr' | 'inventory' | 'sales';
+
+const POS_CART_STORAGE_KEY = 'vibe_pos_current_cart';
 
 interface Line extends MenuItem {
   qty: number;
@@ -44,9 +53,24 @@ export const POS: React.FC = () => {
   const [loaded, setLoaded] = useState<LoadedMenu>(DEMO_LOADED_MENU);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('');
-  const [lines, setLines] = useState<Line[]>([]);
-  const [online, setOnline] = useState(true);
+  const [lines, setLines] = useState<Line[]>(() => {
+    try {
+      const saved = localStorage.getItem(POS_CART_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn('Could not read saved POS cart from localStorage', e);
+    }
+    return [];
+  });
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [queued, setQueued] = useState(0);
+  const [queuedOrders, setQueuedOrders] = useState<QueuedPOSOrder[]>([]);
+  const [showQueueModal, setShowQueueModal] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncToast, setSyncToast] = useState<string | null>(null);
   const [tipPct, setTipPct] = useState(0);
   const [member, setMember] = useState('');
   const [memberFound, setMemberFound] = useState<null | { name: string; points: number }>(null);
@@ -54,6 +78,63 @@ export const POS: React.FC = () => {
   const [receipt, setReceipt] = useState<null | { total: number; method: string; note?: string; offline: boolean }>(null);
 
   const tableLabel = initialTable || (station === 'mobile' ? 'Mobile Server' : 'Register 1');
+
+  // Subscribe to offline order queue updates
+  useEffect(() => {
+    const unsubscribe = subscribeOfflineQueue((orders) => {
+      setQueuedOrders(orders);
+      const pendingCount = orders.filter((o) => o.status === 'queued' || o.status === 'failed').length;
+      setQueued(pendingCount);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAutoSync = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const result = await syncQueuedOrders();
+      if (result.syncedCount > 0) {
+        setSyncToast(`✓ Auto-synced ${result.syncedCount} offline order(s) via Service Worker!`);
+        setTimeout(() => setSyncToast(null), 5000);
+      }
+    } catch {
+      // Background sync will retry
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  // Listen for browser online / offline network events
+  useEffect(() => {
+    const handleNetworkChange = () => {
+      const isOnline = navigator.onLine;
+      setOnline(isOnline);
+      ops.setNetwork(isOnline ? 'wifi' : 'lte');
+      if (isOnline) {
+        handleAutoSync();
+      }
+    };
+
+    window.addEventListener('online', handleNetworkChange);
+    window.addEventListener('offline', handleNetworkChange);
+    return () => {
+      window.removeEventListener('online', handleNetworkChange);
+      window.removeEventListener('offline', handleNetworkChange);
+    };
+  }, [ops, handleAutoSync]);
+
+  // Auto-save cart lines to localStorage
+  useEffect(() => {
+    try {
+      if (lines.length > 0) {
+        localStorage.setItem(POS_CART_STORAGE_KEY, JSON.stringify(lines));
+      } else {
+        localStorage.removeItem(POS_CART_STORAGE_KEY);
+      }
+    } catch (e) {
+      console.warn('Could not auto-save POS cart to localStorage', e);
+    }
+  }, [lines]);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,17 +202,24 @@ export const POS: React.FC = () => {
     setMemberFound({ name: 'Returning guest', points: 240 });
   };
 
-  const pay = (method: string, note?: string) => {
+  const pay = async (method: string, note?: string) => {
     if (lines.length === 0) return;
 
-    // Automatically fire KDS Ticket for line cooks
-    ops.addKDSTicket({
+    const currentLines = [...lines];
+    const currentSubtotal = subtotal;
+    const currentDiscount = discount;
+    const currentTax = tax;
+    const currentTip = tip;
+    const currentTotal = total;
+
+    // 1. Automatically fire KDS Ticket for line cooks (always immediate)
+    const kdsTicket = ops.addKDSTicket({
       orderSource: initialSource === 'qr' ? 'QR Table' : station === 'mobile' ? 'Dine-In' : 'Dine-In',
       locationLabel: tableLabel,
       serverName: user?.email ? user.email.split('@')[0] : 'Counter Register',
       status: 'queued',
       priority: 'normal',
-      items: lines.map((l) => ({
+      items: currentLines.map((l) => ({
         id: `item-${l.id}-${Date.now()}`,
         name: l.name,
         qty: l.qty,
@@ -150,11 +238,92 @@ export const POS: React.FC = () => {
       specialInstructions: note || `Paid via ${method} (${tableLabel})`,
     });
 
-    // Automatically decrement live inventory items
-    ops.decrementInventoryForItems(lines.map((l) => ({ name: l.name, qty: l.qty })));
+    // 2. Automatically decrement live inventory items
+    ops.decrementInventoryForItems(currentLines.map((l) => ({ name: l.name, qty: l.qty })));
 
-    setReceipt({ total, method, note, offline: !online });
-    if (!online) setQueued((q) => q + 1);
+    // 3. Handle offline vs online persistence
+    if (!online) {
+      // Enqueue to Service Worker IndexedDB storage
+      await enqueueOfflineOrder({
+        ticketNumber: kdsTicket.ticketNumber,
+        items: currentLines.map((l) => ({
+          id: l.id,
+          name: l.name,
+          qty: l.qty,
+          price: l.price,
+          category: l.category,
+          taxClass: l.taxClass,
+          description: l.description,
+        })),
+        subtotal: currentSubtotal,
+        discount: currentDiscount,
+        tax: currentTax,
+        tip: currentTip,
+        total: currentTotal,
+        tenderMethod: `${method} (Offline LTE)`,
+        station,
+        tableLabel,
+        serverName: user?.email ? user.email.split('@')[0] : 'Counter Register',
+        specialInstructions: note,
+      });
+      setReceipt({ total: currentTotal, method: `${method} (Offline LTE)`, note, offline: true });
+    } else {
+      // Post to cloud store; fallback to offline queue if network fails
+      try {
+        const res = await fetch('/api/pos/orders/batch-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orders: [
+              {
+                id: `pos-${Date.now()}`,
+                ticketNumber: kdsTicket.ticketNumber,
+                items: currentLines.map((l) => ({ id: l.id, name: l.name, qty: l.qty, price: l.price })),
+                subtotal: currentSubtotal,
+                discount: currentDiscount,
+                tax: currentTax,
+                tip: currentTip,
+                total: currentTotal,
+                tenderMethod: method,
+                station,
+                tableLabel,
+                serverName: user?.email ? user.email.split('@')[0] : 'Counter Register',
+                specialInstructions: note,
+                createdAt: Date.now(),
+              },
+            ],
+          }),
+        });
+
+        if (!res.ok) throw new Error('Cloud offline');
+        setReceipt({ total: currentTotal, method, note, offline: false });
+      } catch {
+        await enqueueOfflineOrder({
+          ticketNumber: kdsTicket.ticketNumber,
+          items: currentLines.map((l) => ({
+            id: l.id,
+            name: l.name,
+            qty: l.qty,
+            price: l.price,
+            category: l.category,
+            taxClass: l.taxClass,
+            description: l.description,
+          })),
+          subtotal: currentSubtotal,
+          discount: currentDiscount,
+          tax: currentTax,
+          tip: currentTip,
+          total: currentTotal,
+          tenderMethod: method,
+          station,
+          tableLabel,
+          serverName: user?.email ? user.email.split('@')[0] : 'Counter Register',
+          specialInstructions: note,
+        });
+        setReceipt({ total: currentTotal, method, note, offline: true });
+      }
+    }
+
     setLines([]);
     setTipPct(0);
     setMember('');
@@ -257,7 +426,12 @@ export const POS: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={() => setOnline((o) => !o)}
+                  onClick={() => {
+                    const next = !online;
+                    setOnline(next);
+                    ops.setNetwork(next ? 'wifi' : 'lte');
+                    if (next) handleAutoSync();
+                  }}
                   className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
                     online ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
                   }`}
@@ -265,16 +439,44 @@ export const POS: React.FC = () => {
                   {online ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
                   {online ? 'Online · synced' : `Offline · LTE backup${queued ? ` · ${queued} queued` : ''}`}
                 </button>
-                {!online && (
+
+                {queuedOrders.length > 0 && (
                   <button
-                    onClick={() => { setOnline(true); setQueued(0); }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white"
+                    onClick={() => setShowQueueModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs font-bold text-amber-900 hover:bg-amber-100"
                   >
-                    <RefreshCw className="h-4 w-4" /> Reconnect &amp; sync
+                    <Database className="h-4 w-4 text-amber-700" />
+                    Offline Queue ({queuedOrders.length})
+                  </button>
+                )}
+
+                {(!online || queued > 0) && (
+                  <button
+                    onClick={handleAutoSync}
+                    disabled={isSyncing}
+                    className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 disabled:opacity-50"
+                  >
+                    {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    {isSyncing ? 'Syncing...' : 'Sync Queued Now'}
                   </button>
                 )}
               </div>
             </div>
+
+            {syncToast && (
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-900 shadow-sm animate-in fade-in">
+                <span className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-emerald-700" />
+                  {syncToast}
+                </span>
+                <button
+                  onClick={() => setSyncToast(null)}
+                  className="rounded-lg p-1 text-emerald-700 hover:bg-emerald-100"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
 
             {loaded.isDemo && !loading && (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
@@ -286,8 +488,17 @@ export const POS: React.FC = () => {
             )}
 
             {!online && (
-              <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-                Network down — orders and card payments continue on cell data and queue locally. Nothing is lost.
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                <div className="flex items-center gap-2">
+                  <CloudOff className="h-4 w-4 shrink-0 text-amber-700" />
+                  <span>Network down — orders continue smoothly and auto-queue locally in Service Worker &amp; IndexedDB.</span>
+                </div>
+                <button
+                  onClick={() => setShowQueueModal(true)}
+                  className="text-xs font-black underline hover:text-amber-950"
+                >
+                  View Offline Ledger ({queuedOrders.length})
+                </button>
               </div>
             )}
 
@@ -356,7 +567,14 @@ export const POS: React.FC = () => {
               {/* Order Cart & Payment Sidebar */}
               <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                  <h2 className="text-lg font-black text-stone-900">Current Order ({tableLabel})</h2>
+                  <div>
+                    <h2 className="text-lg font-black text-stone-900">Current Order ({tableLabel})</h2>
+                    {lines.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                        <Check className="h-3 w-3" /> Auto-saved to device
+                      </span>
+                    )}
+                  </div>
                   {lines.length > 0 && (
                     <button onClick={() => setLines([])} className="text-xs font-bold text-red-600 hover:underline">
                       Clear Order
@@ -439,9 +657,17 @@ export const POS: React.FC = () => {
 
                 {receipt && (
                   <div className="mt-4 animate-in fade-in rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-xs text-emerald-900">
-                    <div className="flex items-center gap-2 font-black">
-                      <Check className="h-4 w-4 text-emerald-700" />
-                      Order Fired to Kitchen ({formatCents(receipt.total)})
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-black">
+                        <Check className="h-4 w-4 text-emerald-700" />
+                        Order Fired to Kitchen ({formatCents(receipt.total)})
+                      </div>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        receipt.offline ? 'bg-amber-200 text-amber-900' : 'bg-emerald-200 text-emerald-900'
+                      }`}>
+                        {receipt.offline ? <Database className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />}
+                        {receipt.offline ? 'Queued (SW/IDB)' : 'Synced Cloud'}
+                      </span>
                     </div>
                     <p className="mt-1 text-[11px] text-emerald-800">
                       Payment recorded via {receipt.method}. Live KDS ticket #{Math.max(100, ...ops.kdsTickets.map(t => t.ticketNumber))} created for kitchen line cooks!
@@ -455,6 +681,14 @@ export const POS: React.FC = () => {
             <div className="mt-6">
               <DeviceBar />
             </div>
+
+            {/* Modal for inspect/manage offline order queue */}
+            <OfflineQueueModal
+              isOpen={showQueueModal}
+              onClose={() => setShowQueueModal(false)}
+              orders={queuedOrders}
+              isOnline={online}
+            />
           </>
         )}
       </div>

@@ -367,6 +367,19 @@ Return JSON with schema:
   // -------------------------------------------------------------
 
   // In-memory Cloud Data Store with seed data for hardware catalog & live sync
+  const SEED_HARDWARE_PRODUCTS = [
+    { id: 'gc-term-15', handle: 'vibe-terminal-15-countertop', name: 'Vibe Terminal 15" Countertop POS', price: 112900, product_type: 'Terminals', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787377813771_fc273298.jpg'], sku: 'VT-15-CTR', tags: ['featured', 'terminal', 'counter'], status: 'active', has_variants: false, description: 'The full-size countertop station: 15" tap-optimised touchscreen on a brushed swivel stand.' },
+    { id: 'gc-term-10', handle: 'vibe-terminal-mini-10', name: 'Vibe Terminal Mini 10"', price: 79900, product_type: 'Terminals', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372145590_b087d828.jpg'], sku: 'LLE-TERM-10', tags: ['featured', 'terminals', 'counter'], status: 'active', has_variants: false, description: '10" all-in-one counter terminal with a tilt stand and a built-in reader.' },
+    { id: 'gc-hand-6', handle: 'vibe-handheld-order-pad', name: 'Vibe Handheld Order Pad', price: 49900, product_type: 'Terminals', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372146076_0e75e2cc.jpg'], sku: 'LLE-HAND-6', tags: ['featured', 'terminals', 'mobile'], status: 'active', has_variants: false, description: 'Rugged 6" handheld with a built-in reader. Take the order and the payment at the table.' },
+    { id: 'gc-tab-10', handle: 'vibe-tab-10-budget-touchscreen', name: 'Vibe Tab 10" Budget Touchscreen', price: 14900, product_type: 'Terminals', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372148347_53afdd09.jpg'], sku: 'LLE-TAB-10', tags: ['featured', 'budget', 'terminals', 'counter', 'unbranded'], status: 'active', has_variants: false, description: 'Commercial-grade 10" touchscreen station with zero recurring software fees.' },
+    { id: 'gc-kds-22', handle: 'vibe-kitchen-display-22', name: 'Vibe Kitchen Display 22"', price: 89900, product_type: 'Kitchen Display', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372142864_3b1f797c.jpg'], sku: 'LLE-KDS-22', tags: ['featured', 'kitchen'], status: 'active', has_variants: false, description: '22" splash-resistant kitchen display with a bump bar and four-minute red timers.' },
+    { id: 'gc-rdr-tap', handle: 'vibe-tap-chip-reader', name: 'Vibe Tap & Chip Reader', price: 24900, product_type: 'Card Readers', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372123528_f67f0044.jpg'], sku: 'LLE-RDR-TAP', tags: ['featured', 'payments'], status: 'active', has_variants: false, description: 'Countertop reader for tap, chip, swipe and wallet payments.' },
+    { id: 'gc-rcpt-80', handle: 'vibe-thermal-receipt-printer', name: 'Vibe Thermal Receipt Printer', price: 27900, product_type: 'Printers', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372118486_4692d9d0.jpg'], sku: 'LLE-RCPT-80', tags: ['featured', 'printers', 'counter'], status: 'active', has_variants: false, description: '80mm ESC/POS thermal printer for guest receipts.' },
+    { id: 'gc-kit-impact', handle: 'vibe-kitchen-impact-printer', name: 'Vibe Kitchen Impact Printer', price: 32900, product_type: 'Printers', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372122795_29a24d9a.jpg'], sku: 'LLE-KIT-IMPACT', tags: ['kitchen', 'printers'], status: 'active', has_variants: false, description: 'Two-colour impact printer built for heat, steam and grease.' },
+    { id: 'gc-drwr-16', handle: 'vibe-cash-drawer', name: 'Vibe Cash Drawer (Standard)', price: 15900, product_type: 'Cash Drawers', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787372121916_8239c96e.jpg'], sku: 'LLE-DRWR-16', tags: ['featured', 'counter'], status: 'active', has_variants: false, description: 'Full-size 16" steel drawer with a five-bill, eight-coin till.' },
+    { id: 'gc-kit-counter', handle: 'counter-service-starter-bundle', name: 'Counter Service Starter Bundle', price: 179900, product_type: 'Starter Kits', images: ['https://d64gsuwffb70l.cloudfront.net/6a7724f7e7b1bd470e4c72fe_1787377882303_347064ed.jpg'], sku: 'KIT-COUNTER-SVC', tags: ['featured', 'bundle', 'restaurant'], status: 'active', has_variants: false, description: 'The opening-day counter: 15" terminal, thermal printer, locking cash drawer and reader.' },
+  ];
+
   const cloudStore: Record<string, any[]> = {
     shops: [],
     menu_items: [],
@@ -375,6 +388,7 @@ Return JSON with schema:
     shop_vibe_briefs: [],
     tax_jurisdictions: [],
     tax_class_rules: [],
+    ecom_products: [...SEED_HARDWARE_PRODUCTS],
     ecom_orders: [],
     ecom_order_items: [],
     ecom_customers: [],
@@ -521,6 +535,43 @@ Return JSON with schema:
     });
     
     res.json({ success: true, deletedCount: before - cloudStore[collection].length });
+  });
+
+  // POS Offline Queue Batch Sync Endpoint (/api/pos/orders/batch-sync)
+  app.post("/api/pos/orders/batch-sync", (req, res) => {
+    const { orders = [] } = req.body;
+    if (!cloudStore.pos_orders) cloudStore.pos_orders = [];
+    if (!cloudStore.ecom_orders) cloudStore.ecom_orders = [];
+
+    const syncedList = (Array.isArray(orders) ? orders : [orders]).map((ord) => ({
+      id: ord.id || "pos-synced-" + Math.random().toString(36).slice(2, 10),
+      order_number: ord.ticketNumber || ("POS-" + Math.floor(1000 + Math.random() * 9000)),
+      station: ord.station || "terminal",
+      table_label: ord.tableLabel || "Register",
+      server_name: ord.serverName || "Staff",
+      tender_method: ord.tenderMethod || "Cash",
+      items: ord.items || [],
+      subtotal: ord.subtotal || 0,
+      discount: ord.discount || 0,
+      tax: ord.tax || 0,
+      tip: ord.tip || 0,
+      total: ord.total || 0,
+      status: "completed",
+      source: "pos_offline_synced",
+      special_instructions: ord.specialInstructions || "",
+      created_at: ord.createdAt ? new Date(ord.createdAt).toISOString() : new Date().toISOString(),
+      synced_at: new Date().toISOString(),
+    }));
+
+    cloudStore.pos_orders.push(...syncedList);
+
+    console.info(`[POS Sync] Ingested ${syncedList.length} offline POS order(s) to cloud store.`);
+    res.json({
+      success: true,
+      syncedCount: syncedList.length,
+      syncedIds: syncedList.map((o) => o.id),
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // Google ADK / GenAI Menu Parser (/api/cloud/parse-menu)

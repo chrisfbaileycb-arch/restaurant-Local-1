@@ -5,6 +5,7 @@ import { ShoppingCart, Menu, X, ChevronDown, LogOut, Heart, Package } from 'luci
 import { fetchCollections, FALLBACK_COLLECTIONS, type CatalogCollection } from '@/lib/catalog';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import NetworkStatusIndicator from '@/components/site/NetworkStatusIndicator';
 
 
 
@@ -101,6 +102,8 @@ const Header: React.FC = () => {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <NetworkStatusIndicator />
+
           <Link
             to="/cart"
             className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 transition hover:bg-orange-50 hover:text-orange-600"
@@ -159,6 +162,10 @@ const Header: React.FC = () => {
 
       {mobile && (
         <div className="animate-slide-in border-t border-orange-100 bg-white px-4 py-3 lg:hidden">
+          <div className="mb-2 flex items-center justify-between border-b border-orange-100 pb-2">
+            <span className="text-xs font-semibold text-slate-500">Connection</span>
+            <NetworkStatusIndicator showWhenOnline={true} />
+          </div>
           {PLATFORM_LINKS.map((l) => (
             <Link
               key={l.to}
