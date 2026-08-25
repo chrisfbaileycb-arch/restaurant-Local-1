@@ -91,8 +91,14 @@ const TemplatesAndLogo: React.FC = () => {
               <Sparkles className="h-4 w-4" /> Run the build flow
             </button>
             <Link
-              to="/onboarding"
+              to="/dashboard"
               className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-white/10"
+            >
+              Owner Dashboard <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/onboarding"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-white/20"
             >
               Upload my real menu <ArrowRight className="h-4 w-4" />
             </Link>

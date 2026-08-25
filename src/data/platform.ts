@@ -650,7 +650,7 @@ export const STARTER_PLANS: StarterPlan[] = [
       'tap-only-card-reader',
       'mini-receipt-printer-bluetooth',
     ],
-    note: 'A real touchscreen station for the price of a month of most POS contracts.',
+    note: 'A commercial-grade touchscreen station with zero recurring software fees.',
   },
   {
     id: 'counter-kitchen',

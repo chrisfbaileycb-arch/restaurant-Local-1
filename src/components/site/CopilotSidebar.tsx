@@ -26,6 +26,7 @@ import { QUICK_ACTIONS, COPILOT_SUGGESTIONS, COPILOT_SKILLS, TODAY_SNAPSHOT } fr
 import { COPILOT_MODES, type CopilotModeId } from '@/data/copilotModes';
 import { DEVICE_KINDS, formatCents, type DeviceKindId } from '@/data/platform';
 import type { LoadedMenu } from '@/lib/menuStore';
+import { askGeminiChat } from '@/lib/geminiApi';
 
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -320,37 +321,51 @@ const CopilotSidebar: React.FC<SidebarProps> = ({
     }
 
 
-    // Open-ended question — hand it to the model with live shop context.
+    // Open-ended question — hand it to Gemini AI with live shop context.
     const { laborCost, pct, overtime } = laborAudit();
     try {
-      const { data } = await supabase.functions.invoke('copilot-chat', {
-        body: {
-          message: text,
-          history: messages.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })),
-          context: {
-            shop: menu.shopName,
-            itemCount: menu.items.length,
-            categories: menu.categories,
-            eightySixed: ops.eightySixed,
-            activePromos: ops.promos.map((p) => `${p.pct}% off ${p.scope}`),
-            netSalesToday: formatCents(TODAY_SNAPSHOT.netSales),
-            laborCost: formatCents(laborCost),
-            laborPct: `${(pct * 100).toFixed(1)}%`,
-            overtimeRisk: overtime.map((s) => `${s.name} ${s.weekHours}h`),
-            network: ops.network,
-            website: site
-              ? {
-                  domain: site.domain,
-                  googlePlaceId: site.google_place_id,
-                  logoSaved: !!site.logo_url,
-                  hiringEnabled: site.hiring_enabled,
-                  sectionsOn: site.section_order,
-                }
-              : null,
-          },
+      const response = await askGeminiChat(
+        text,
+        messages.slice(-6).map((m) => ({
+          role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
+          content: m.text,
+        })),
+        {
+          shop: menu.shopName,
+          itemCount: menu.items.length,
+          categories: menu.categories,
+          eightySixed: ops.eightySixed,
+          inventoryAlertsCount: ops.inventory.filter((i) => i.stockQty <= i.lowStockThreshold).length,
+          kdsActiveTickets: ops.kdsTickets.filter((t) => t.status !== 'completed').length,
+          activePromos: ops.promos.map((p) => `${p.pct}% off ${p.scope}`),
+          netSalesToday: formatCents(TODAY_SNAPSHOT.netSales),
+          laborCost: formatCents(laborCost),
+          laborPct: `${(pct * 100).toFixed(1)}%`,
+          overtimeRisk: overtime.map((s) => `${s.name} ${s.weekHours}h`),
+          network: ops.network,
+          website: site
+            ? {
+                domain: site.domain,
+                googlePlaceId: site.google_place_id,
+                logoSaved: !!site.logo_url,
+                hiringEnabled: site.hiring_enabled,
+                sectionsOn: site.section_order,
+              }
+            : null,
         },
-      });
-      push({ role: 'agent', tone: 'ok', text: data?.reply || 'I did not catch that one — try a direct command.' });
+        mode
+      );
+
+      // If Gemini suggested an immediate action or 86, process it
+      if (response.suggestedAction) {
+        if (response.suggestedAction.action === '86' && response.suggestedAction.target) {
+          ops.eightySix(response.suggestedAction.target);
+        } else if (response.suggestedAction.action === 'restore' && response.suggestedAction.target) {
+          ops.restore(response.suggestedAction.target);
+        }
+      }
+
+      push({ role: 'agent', tone: 'ok', text: response.reply || 'I am ready to help manage orders, inventory, KDS or sales.' });
     } catch {
       push({
         role: 'agent',

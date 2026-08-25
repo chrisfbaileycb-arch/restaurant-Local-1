@@ -1,0 +1,133 @@
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  stockQty: number;
+  unit: string;
+  lowStockThreshold: number;
+  costCents: number;
+  menuItemName?: string;
+  supplier: string;
+  lastRestocked: string;
+  is86: boolean;
+}
+
+export const INITIAL_INVENTORY: InventoryItem[] = [
+  {
+    id: "inv-1",
+    name: "Angus Beef Chuck Patties",
+    category: "Proteins",
+    stockQty: 38,
+    unit: "patties",
+    lowStockThreshold: 15,
+    costCents: 185,
+    menuItemName: "Smash Burger",
+    supplier: "US Foods",
+    lastRestocked: "Today 6:00 AM",
+    is86: false,
+  },
+  {
+    id: "inv-2",
+    name: "Brioche Burger Buns",
+    category: "Bakery",
+    stockQty: 42,
+    unit: "buns",
+    lowStockThreshold: 20,
+    costCents: 65,
+    menuItemName: "Smash Burger",
+    supplier: "Local Artisan Bakery",
+    lastRestocked: "Today 6:30 AM",
+    is86: false,
+  },
+  {
+    id: "inv-3",
+    name: "Fresh Atlantic Salmon Fillets",
+    category: "Proteins",
+    stockQty: 4,
+    unit: "portions",
+    lowStockThreshold: 8,
+    costCents: 620,
+    menuItemName: "Grilled Salmon Bowl",
+    supplier: "Pacific Catch Seafood",
+    lastRestocked: "Yesterday 2:00 PM",
+    is86: false,
+  },
+  {
+    id: "inv-4",
+    name: "Black Truffle Oil (500ml)",
+    category: "Pantry & Oils",
+    stockQty: 2,
+    unit: "bottles",
+    lowStockThreshold: 3,
+    costCents: 2100,
+    menuItemName: "Truffle Fries",
+    supplier: "Specialty Imports",
+    lastRestocked: "3 days ago",
+    is86: false,
+  },
+  {
+    id: "inv-5",
+    name: "Russet Burbank Potatoes",
+    category: "Produce",
+    stockQty: 65,
+    unit: "lbs",
+    lowStockThreshold: 25,
+    costCents: 45,
+    menuItemName: "Truffle Fries",
+    supplier: "Valley Produce",
+    lastRestocked: "Yesterday 7:00 AM",
+    is86: false,
+  },
+  {
+    id: "inv-6",
+    name: "Local Craft IPA Keg (1/2 bbl)",
+    category: "Beverages",
+    stockQty: 18,
+    unit: "pours remaining",
+    lowStockThreshold: 25,
+    costCents: 140,
+    menuItemName: "Local Craft IPA",
+    supplier: "Bay Hop Brewery",
+    lastRestocked: "2 days ago",
+    is86: false,
+  },
+  {
+    id: "inv-7",
+    name: "Aged Sharp White Cheddar",
+    category: "Dairy",
+    stockQty: 24,
+    unit: "blocks (1lb)",
+    lowStockThreshold: 10,
+    costCents: 420,
+    menuItemName: "Smash Burger",
+    supplier: "Tillamook Dairy",
+    lastRestocked: "Yesterday 8:00 AM",
+    is86: false,
+  },
+  {
+    id: "inv-8",
+    name: "Avocados (Hass #48)",
+    category: "Produce",
+    stockQty: 14,
+    unit: "pieces",
+    lowStockThreshold: 10,
+    costCents: 110,
+    menuItemName: "Avocado Toast",
+    supplier: "Valley Produce",
+    lastRestocked: "Today 6:00 AM",
+    is86: false,
+  },
+  {
+    id: "inv-9",
+    name: "Organic Meyer Lemons",
+    category: "Produce",
+    stockQty: 30,
+    unit: "lbs",
+    lowStockThreshold: 12,
+    costCents: 80,
+    menuItemName: "House Lemonade",
+    supplier: "Citrus Grove Co",
+    lastRestocked: "Today 6:30 AM",
+    is86: false,
+  },
+];

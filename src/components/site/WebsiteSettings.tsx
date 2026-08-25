@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Globe, MapPin, Upload, Save, Check, Loader2, Link2, Briefcase, ImageIcon, Trash2,
-  Megaphone, Phone, RefreshCw, MessageSquare, Star, ExternalLink, ShoppingBag,
+  Megaphone, Phone, RefreshCw, MessageSquare, Star, ExternalLink, ShoppingBag, Eye,
+  Palette, Sparkles, Smartphone, Monitor, X,
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { loadShopMenu, DEMO_LOADED_MENU, type LoadedMenu } from '@/lib/menuStore';
 import { askCopilot } from '@/components/site/CopilotDock';
 import WebsiteMenuPanel from '@/components/site/WebsiteMenuPanel';
+import OnePageSiteTemplate from '@/components/website/OnePageSiteTemplate';
 import {
   loadSiteSettings, saveSiteSettings, uploadShopMedia, emptySiteSettings, fetchGooglePlace, placeToSettings,
   SITE_SECTIONS, SOCIAL_FIELDS, missingSitePieces, type SiteSettings, type GooglePlaceResult,
@@ -51,6 +54,8 @@ const WebsiteSettings: React.FC = () => {
   const [placeQuery, setPlaceQuery] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [place, setPlace] = useState<GooglePlaceResult | null>(null);
+  const [showWalkthroughModal, setShowWalkthroughModal] = useState(false);
+  const [walkthroughDevice, setWalkthroughDevice] = useState<'phone' | 'desktop'>('phone');
   const logoInput = useRef<HTMLInputElement>(null);
   const dishInput = useRef<HTMLInputElement>(null);
 
@@ -177,12 +182,26 @@ const WebsiteSettings: React.FC = () => {
             {gaps.length ? `Still needed: ${gaps.join(', ')}.` : 'Everything is saved — this page is ready to publish.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowWalkthroughModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-sm font-bold text-amber-900 shadow-sm transition hover:bg-amber-100"
+          >
+            <Eye className="h-4 w-4 text-amber-600" />
+            Live Walkthrough Demo
+          </button>
+          <Link
+            to="/templates-logo"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-bold text-stone-700 shadow-sm transition hover:bg-stone-50"
+          >
+            <Palette className="h-4 w-4 text-fuchsia-600" />
+            Vibe &amp; Logo Studio
+          </Link>
           <button
             onClick={() => askCopilot('Build my website page')}
-            className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:border-stone-400"
+            className="rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm font-bold text-stone-700 transition hover:border-stone-400"
           >
-            Ask the copilot
+            Ask copilot
           </button>
           <button
             onClick={save}
@@ -190,7 +209,7 @@ const WebsiteSettings: React.FC = () => {
             className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-            {saving ? 'Saving…' : saved ? 'Saved' : 'Save website settings'}
+            {saving ? 'Saving…' : saved ? 'Saved' : 'Save settings'}
           </button>
         </div>
       </div>
@@ -464,6 +483,101 @@ const WebsiteSettings: React.FC = () => {
           </ul>
         </div>
       </div>
+
+      {/* Live Walkthrough Overlay Demo for paying / setup customers */}
+      {showWalkthroughModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-2 text-white shadow">
+                  <Eye className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">
+                    Live Landing Page Walkthrough · {form.business_name || shopName}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Full customer-facing experience with Google Maps directions, online ordering, about bio, and socials.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Device switch */}
+                <div className="flex items-center rounded-xl bg-slate-800 p-1 border border-slate-700">
+                  <button
+                    onClick={() => setWalkthroughDevice('phone')}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                      walkthroughDevice === 'phone' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setWalkthroughDevice('desktop')}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                      walkthroughDevice === 'desktop' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Monitor className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowWalkthroughModal(false)}
+                  className="rounded-xl bg-slate-800 p-2 text-slate-400 hover:bg-slate-700 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Live rendered landing page */}
+            <div className="flex-1 overflow-y-auto bg-slate-950 p-6 flex justify-center items-start">
+              <div className={`w-full transition-all duration-300 ${walkthroughDevice === 'phone' ? 'max-w-sm' : 'max-w-2xl'}`}>
+                <OnePageSiteTemplate
+                  shopName={form.business_name || shopName}
+                  tagline={form.story ? form.story.slice(0, 70) + '...' : 'Craft fresh dining · Farm to table'}
+                  conceptId="dine-in"
+                  items={menu.items.map((it, idx) => ({
+                    name: it.name,
+                    price: it.priceCents,
+                    note: it.description || 'Prepared fresh to order.',
+                    modifiers: idx % 3,
+                  }))}
+                  hours={form.hours.map((h) => {
+                    const [d, ...t] = h.split(': ');
+                    return { day: d, open: t.join(': ') || '11:00 AM – 9:00 PM', closed: false };
+                  })}
+                  address={form.address || '412 Harbor St, Riverside'}
+                  phone={form.phone || '(828) 555-0134'}
+                  mapUrl={form.map_url || undefined}
+                  logoUrl={form.logo_url}
+                  socials={Object.keys(form.socials).length > 0 ? Object.keys(form.socials) : ['Instagram', 'Facebook', 'Google Reviews']}
+                  hiring={form.hiring_enabled}
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-slate-800 bg-slate-900 px-6 py-3 text-xs text-slate-400">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live 0% Commission Direct Ordering Activated</span>
+              </div>
+              <Link
+                to="/templates-logo"
+                onClick={() => setShowWalkthroughModal(false)}
+                className="inline-flex items-center gap-1 font-bold text-amber-400 hover:text-amber-300"
+              >
+                Customize Logo &amp; Palette in Vibe Studio <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

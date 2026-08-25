@@ -30,6 +30,10 @@ import Audit from "./pages/Audit";
 import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import Status from "./pages/Status";
+import KDSPage from "./pages/KDSPage";
+import QRMenuPage from "./pages/QRMenuPage";
+import InventoryPage from "./pages/InventoryPage";
+import DailySalesPage from "./pages/DailySalesPage";
 
 
 
@@ -77,6 +81,17 @@ const App = () => (
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/status" element={<Status />} />
+
+                {/* Gemini AI & Operations Hub Routes */}
+                <Route path="/kds" element={<KDSPage />} />
+                <Route path="/kitchen" element={<KDSPage />} />
+                <Route path="/qr-menu" element={<QRMenuPage />} />
+                <Route path="/qr" element={<QRMenuPage />} />
+                <Route path="/inventory" element={<InventoryPage />} />
+                <Route path="/stock" element={<InventoryPage />} />
+                <Route path="/daily-sales" element={<DailySalesPage />} />
+                <Route path="/sales-summary" element={<DailySalesPage />} />
+                <Route path="/z-report" element={<DailySalesPage />} />
 
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/pos" element={<POS />} />

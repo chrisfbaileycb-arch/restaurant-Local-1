@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Gift, CreditCard, Download, TrendingUp, Users, Percent, Receipt, Package,
-  Activity, ShieldCheck, ShieldAlert, Plug, Clock, Globe,
+  Activity, ShieldCheck, ShieldAlert, Plug, Clock, Globe, ChefHat, QrCode, Sparkles,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell,
@@ -17,9 +17,13 @@ import PayrollTaxSetting from '@/components/site/PayrollTaxSetting';
 import WebsiteSettings from '@/components/site/WebsiteSettings';
 import BuildStatus from '@/components/site/BuildStatus';
 import CopilotDock from '@/components/site/CopilotDock';
-
+import DailySalesSummary from '@/components/sales/DailySalesSummary';
+import KitchenDisplaySystem from '@/components/kds/KitchenDisplaySystem';
+import InventoryAlerts from '@/components/inventory/InventoryAlerts';
+import QRMenuGenerator from '@/components/qr/QRMenuGenerator';
 
 import { useDeviceHealth, sinceLabel } from '@/hooks/useDeviceHealth';
+import { useOps } from '@/lib/opsStore';
 
 import {
   SALES_TREND, CATEGORY_MIX, TAX_JURISDICTIONS, SHIFTS, WEEK_DAYS, REPORTS, REWARD_PROGRAMS,
@@ -27,14 +31,18 @@ import {
 } from '@/data/platform';
 
 const TABS = [
-  { id: 'stations', label: 'Stations & hardware', icon: Plug },
-  { id: 'website', label: 'Website', icon: Globe },
-  { id: 'sales', label: 'Sales & reports', icon: BarChart3 },
-  { id: 'tax', label: 'Sales tax', icon: Receipt },
-  { id: 'team', label: 'Schedule & labor', icon: CalendarDays },
+  { id: 'daily-summary', label: 'AI Daily Sales', icon: Sparkles },
+  { id: 'kds', label: 'Kitchen (KDS)', icon: ChefHat },
+  { id: 'inventory', label: 'Inventory & 86', icon: Package },
+  { id: 'qr-menu', label: 'QR Menu Links', icon: QrCode },
+  { id: 'website', label: 'Website & Landing Page', icon: Globe },
+  { id: 'stations', label: 'Stations & Hardware', icon: Plug },
+  { id: 'sales', label: 'Sales & Reports', icon: BarChart3 },
+  { id: 'tax', label: 'Sales Tax', icon: Receipt },
+  { id: 'team', label: 'Schedule & Labor', icon: CalendarDays },
   { id: 'rewards', label: 'Rewards', icon: Gift },
-  { id: 'rates', label: 'Rate shopper', icon: CreditCard },
-  { id: 'orders', label: 'Store orders', icon: Package },
+  { id: 'rates', label: 'Rate Shopper', icon: CreditCard },
+  { id: 'orders', label: 'Store Orders', icon: Package },
 ];
 
 
@@ -144,6 +152,14 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {tab === 'daily-summary' && <DailySalesSummary />}
+
+        {tab === 'kds' && <KitchenDisplaySystem />}
+
+        {tab === 'inventory' && <InventoryAlerts />}
+
+        {tab === 'qr-menu' && <QRMenuGenerator />}
+
         {tab === 'stations' && (
 
           <div className="space-y-6">
